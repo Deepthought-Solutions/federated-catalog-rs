@@ -1,0 +1,16 @@
+[package]
+name = "rdf-store"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Storage-agnostic async trait for the federated catalog cache, plus an in-memory reference implementation."
+
+[dependencies]
+catalog-core = { path = "../catalog-core" }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

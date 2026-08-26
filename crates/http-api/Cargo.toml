@@ -1,0 +1,25 @@
+[package]
+name = "http-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Axum HTTP server skeleton exposing a health check and a stub catalog query endpoint over the rdf-store cache trait."
+
+[[bin]]
+name = "http-api"
+path = "src/main.rs"
+
+[dependencies]
+catalog-core = { path = "../catalog-core" }
+rdf-store = { path = "../rdf-store" }
+axum = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+tower = { workspace = true }
+http-body-util = "0.1"
