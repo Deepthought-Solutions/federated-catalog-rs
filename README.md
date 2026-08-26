@@ -61,21 +61,26 @@ query API described above were reconstructed there by reading EDC's
 source directly (vendored as a submodule in that repo) before any Rust
 code was written here.
 
-## Why the RDF backend isn't chosen yet
+## Why the RDF backend isn't wired in yet
 
 `rdf-store` defines the cache trait as backend-agnostic on purpose. EDC
 itself supports multiple `FederatedCatalogCache` backends (in-memory,
 Postgres via a JSON column) behind one SPI; this project intends to land
 on an actual RDF store — since a federated catalog is naturally a set of
-named graphs — but which one (an embedded store, an external triplestore,
-something else) is being decided iteratively rather than upfront. See the
-`dataspace` repo's spike docs for the ecosystem research feeding that
-decision; when it lands, expect a real ADR-equivalent record of the
-choice alongside the implementation, not just a crate added quietly.
+named graphs. A research spike in the `dataspace` repo's `docs/spikes/`
+surveyed the Rust RDF/quad-store ecosystem and recommends
+[Oxigraph](https://crates.io/crates/oxigraph) as the target backend (see
+the rationale in `rdf-store`'s module docs) — but that crate isn't
+depended on here yet: it pulls in a native RocksDB build by default,
+meaningfully heavier than anything else in this workspace, and isn't
+worth adding before there's a concrete graph-naming/vocabulary scheme to
+store against. When it lands, expect a real ADR-equivalent record of the
+choice in the `dataspace` repo alongside the implementation, not just a
+crate added quietly.
 
 Until then, `rdf-store` ships one in-memory implementation — enough for
 `http-api` and the crate's own tests to run against — behind the same
-trait the eventual RDF-backed implementation will satisfy.
+trait the eventual Oxigraph-backed implementation will satisfy.
 
 ## Layout
 

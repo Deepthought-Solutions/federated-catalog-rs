@@ -18,6 +18,45 @@
 //! participant's crawled catalog is upserted as a whole unit keyed by
 //! origin node - not decomposed into per-dataset rows - mirroring EDC's
 //! choice to key the whole `Catalog` object graph by origin node URL.
+//!
+//! ## Intended future backend: Oxigraph
+//!
+//! A research spike in the `dataspace` study repo (`docs/spikes/`) surveyed
+//! the available Rust RDF/quad-store crates against this trait's shape -
+//! a named-graph quad store, one graph per
+//! crawled source-node IRI, upserted wholesale on crawl, removed via an
+//! explicit delete - and recommended **[Oxigraph](https://crates.io/crates/oxigraph)**
+//! as the eventual backend:
+//!
+//! - It is the only surveyed candidate that both matches the shape (named
+//!   graphs, full SPARQL 1.1 Query/Update/Federated Query) and has a
+//!   maturity track record to build on now: ~8 years old, actively
+//!   maintained, ~700k crates.io downloads, dual Apache-2.0/MIT, with a
+//!   persistent RocksDB-backed store.
+//! - `cool-japan/oxirs` is the closer long-term architectural fit
+//!   (async-native, purpose-built on-disk format, also named-graph
+//!   capable) but at spike time was a 14-month-old, effectively
+//!   single-maintainer workspace whose persistent backend had shipped only
+//!   five weeks earlier, with unaudited test/scale claims - not a
+//!   foundation to bet this rewrite's first concrete cache backend on.
+//! - No other surveyed crate (Sophia, terminusdb-store, hdt, Grafeo,
+//!   kglite, rust-rdftk) beat Oxigraph on the combination of shape-fit and
+//!   maturity.
+//!
+//! **This crate does not depend on Oxigraph yet.** Oxigraph's default
+//! build pulls in `oxrocksdb-sys` (a native RocksDB C++ build), which is
+//! a meaningfully heavier and slower dependency than anything else in
+//! this workspace and needs build tooling (e.g. `cmake`) this repo
+//! doesn't otherwise require - not something to add speculatively before
+//! there's a real RDF vocabulary/graph-naming scheme to store. Wiring it
+//! in is expected to be a dedicated iteration: add `oxigraph` as a
+//! dependency, decide how a [`Catalog`] maps to quads (or, as a first
+//! cut, one blob triple per named graph as a bridge before real
+//! decomposition), and implement [`CatalogCache`] against
+//! `oxigraph::store::Store` behind this same trait - so `http-api` and
+//! this crate's tests don't need to change when the swap happens. Track
+//! the decision as an ADR-equivalent record in the `dataspace` study repo
+//! when it lands, per that repo's `docs/adr/` convention.
 
 use async_trait::async_trait;
 use catalog_core::{Catalog, NodeId};
