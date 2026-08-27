@@ -249,12 +249,23 @@ was in flight; EDC: a live `curl` against a real EDC federated-catalog
 crawler instance, brought up the same way as the benchmarked one, for
 this specific evidence capture).
 
-**Rust** (`POST /dsp/catalog/request`, 2 cached origin nodes) - top-level
-`dataset`/`service` are empty, both participants' 10 datasets are nested
-under `catalog[]`, one entry per origin node:
+Both real responses, foldable, side by side - Rust's top-level
+`dataset`/`service` are empty with both participants' 10 datasets nested
+under `catalog[]`; EDC's is a top-level JSON array of 2 `Catalog` objects,
+each with its own flat `dataset` array (this shape is unchanged by the
+fix - it's EDC's own, pre-existing behavior, reproduced here for a real
+side-by-side, not reused from the original run):
 
-```json
-{
+<div class="harvest-bench-response-grid">
+<style>
+.harvest-bench-response-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin: 1rem 0; }
+.harvest-bench-response-grid details { border: 1px solid #d2d2d2; border-radius: 6px; padding: 0.5rem 0.75rem; }
+.harvest-bench-response-grid summary { cursor: pointer; font-weight: 600; }
+.harvest-bench-response-grid pre { overflow-x: auto; white-space: pre; margin: 0.5rem 0 0 0; }
+</style>
+<details open>
+<summary>Rust — <code>POST /dsp/catalog/request</code> (2 cached origin nodes)</summary>
+<pre><code>{
   "@context": ["https://w3id.org/dspace/2025/1/context.jsonld"],
   "@id": "urn:uuid:344e561f-c145-47af-af5e-6f467feac2c6",
   "@type": "Catalog",
@@ -279,17 +290,11 @@ under `catalog[]`, one entry per origin node:
       "dataset": [ "...7 HARVEST-E-* datasets..." ]
     }
   ]
-}
-```
-
-**EDC** (`POST /api/management/v3/catalogs/request`) - a top-level JSON
-array of 2 `Catalog` objects, each with its own flat `dataset` array and
-`participantId` (this shape is unchanged by the fix - it's EDC's own,
-pre-existing behavior, reproduced here for a real side-by-side, not
-reused from the original run):
-
-```json
-[
+}</code></pre>
+</details>
+<details open>
+<summary>EDC — <code>POST /api/management/v3/catalogs/request</code></summary>
+<pre><code>[
   {
     "@id": "cf5b6b6b-a970-4ae8-97d1-be30fead18a9",
     "@type": "Catalog",
@@ -308,8 +313,9 @@ reused from the original run):
     "dataset": [ "...7 HARVEST-E-* datasets..." ],
     "service": [{ "@type": "DataService", "endpointURL": "http://localhost:19321/api/dsp/2025-1" }]
   }
-]
-```
+]</code></pre>
+</details>
+</div>
 
 Both are genuinely one-entry-per-crawled-participant now: EDC nests via a
 top-level array of `Catalog`, Rust nests via one `Catalog`'s own
