@@ -797,6 +797,29 @@ mod tests {
         assert_eq!(catalog.data_services.len(), 1);
     }
 
+    /// Proves `AppState.cache: Arc<dyn CatalogCache>` genuinely works with
+    /// the real Oxigraph-backed implementation, not just
+    /// `InMemoryCatalogCache` - the backend `main.rs` switches to when
+    /// `CRAWLER_CONFIG_PATH` is set (see that function's doc comment).
+    /// Exercises the real DSP catalog-request endpoint end to end, not
+    /// just the cache trait directly.
+    #[tokio::test]
+    async fn dsp_catalog_request_serves_data_from_the_oxigraph_backend() {
+        let cache: Arc<dyn CatalogCache> = Arc::new(rdf_store::oxigraph_backend::OxigraphCatalogCache::in_memory().unwrap());
+        seed_sample_catalog(&*cache).await.unwrap();
+        let state = AppState::new(cache);
+
+        let app = build_router(state);
+        let response = post_catalog_request(app, None).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let parsed: DspCatalog = serde_json::from_slice(&body).unwrap();
+        let mut ids: Vec<&str> = parsed.dataset.iter().map(|d| d.id.as_str()).collect();
+        ids.sort_unstable();
+        assert_eq!(ids, vec!["CAT0101", "CAT0102"]);
+    }
+
     #[tokio::test]
     async fn catalog_endpoint_filters_by_unknown_node_id() {
         let state = test_state();

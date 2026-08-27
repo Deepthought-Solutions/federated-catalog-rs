@@ -114,37 +114,45 @@ async fn main() {
         );
     }
 
-    // The in-memory cache is a placeholder: the real backend (Oxigraph,
-    // per the rdf-store module docs) will be wired in here once the
-    // graph-naming scheme is decided, behind the same `CatalogCache`
-    // trait.
-    let cache: Arc<dyn CatalogCache> = Arc::new(InMemoryCatalogCache::new());
     let http_client = reqwest::Client::new();
 
     // CRAWLER_CONFIG_PATH unset: byte-identical to this connector's
-    // original behavior - seed one placeholder sample catalog, start no
-    // crawler. CRAWLER_CONFIG_PATH set: this connector now serves real
-    // crawled data instead, via the scheduled crawler below.
-    let holder = match load_crawler_config() {
+    // original behavior - a plain in-memory HashMap cache, seeded with one
+    // placeholder sample catalog, no crawler started.
+    //
+    // CRAWLER_CONFIG_PATH set: this connector now works the way EDC's own
+    // federated catalog does - a periodic, config-driven crawl populates a
+    // real RDF (Oxigraph) store, which the DSP catalog endpoint then
+    // serves. In-memory only, same as EDC's own federated-catalog cache:
+    // there is no on-disk persistence option here either, by design, not
+    // as a gap - see `rdf_store::oxigraph_backend`'s module doc for the
+    // backend itself and `crates/crawler`'s doc comments for the crawl
+    // loop. `InMemoryCatalogCache` (a plain `HashMap`, not backed by RDF
+    // at all) stays the default for everyone not opting into the crawler,
+    // per this function's own strict backward-compatibility requirement.
+    let (cache, holder): (Arc<dyn CatalogCache>, Option<Arc<HolderIdentity>>) = match load_crawler_config() {
         Some(config) => {
+            let cache: Arc<dyn CatalogCache> =
+                Arc::new(rdf_store::oxigraph_backend::OxigraphCatalogCache::in_memory().expect("open in-memory Oxigraph store"));
             let holder = build_holder(&config);
             tracing::info!(
                 participants = config.participants.len(),
                 interval_secs = config.interval_secs,
                 holder_configured = holder.is_some(),
-                "starting scheduled catalog crawler (CRAWLER_CONFIG_PATH set)"
+                "starting scheduled catalog crawler (CRAWLER_CONFIG_PATH set); serving from an in-memory Oxigraph store"
             );
             crawler::spawn_scheduler(cache.clone(), config, http_client.clone(), holder.clone());
-            holder
+            (cache, holder)
         }
         None => {
-            // No crawler configured, so seed one sample catalog to serve
-            // - this stands in for a real crawl result until
-            // CRAWLER_CONFIG_PATH is set.
+            // No crawler configured: the plain in-memory cache, seeded
+            // with one sample catalog - this stands in for a real crawl
+            // result until CRAWLER_CONFIG_PATH is set.
+            let cache: Arc<dyn CatalogCache> = Arc::new(InMemoryCatalogCache::new());
             seed_sample_catalog(&*cache)
                 .await
                 .expect("seeding sample catalog failed");
-            None
+            (cache, None)
         }
     };
 
