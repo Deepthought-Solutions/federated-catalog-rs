@@ -9,31 +9,128 @@
 //! returns `dspace:`/`edc:` JSON-LD) are all deferred to a later
 //! iteration.
 
+mod dcp;
+
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode, header::AUTHORIZATION},
     response::IntoResponse,
     routing::{get, post},
 };
 use catalog_core::{Catalog, DataService, Dataset, Distribution, NodeId};
+pub use dcp::DcpConfig;
 use rdf_store::{CatalogCache, CatalogQuery, StoreResult};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// Shared application state: just the cache, behind a trait object so the
+/// Config for gating the DSP catalog endpoints (`POST
+/// /dsp/catalog/request`, `GET /dsp/catalog/datasets/{id}`) behind a
+/// bearer token, and filtering the catalog per caller once gated.
+///
+/// This is deliberately **not** real DCP (the Decentralized Claims
+/// Protocol EDC's `DcpIdentityService` implements: DID resolution, a
+/// Secure Token Service, a Credential Service round trip, and Verifiable
+/// Presentation validation - see
+/// `docs/spikes/2026-08-27-dataspacetck-compliance-suites.md` and
+/// `compliance/benchmark-2026-08-27.md` in the `dataspace` study repo for
+/// how that comparison came up). There's no signature verification and no
+/// DID resolution here - the bearer token is used as an opaque,
+/// unverified lookup key, closer to a shared-secret API key than a
+/// verified identity. The goal is only to close the *structural* gap the
+/// benchmark found (EDC's DSP endpoint requires some bearer token even
+/// under its own TCK's `NoopIdentityService`; this project's required
+/// none at all) and to demonstrate per-caller catalog filtering, without
+/// taking on a multi-week real-DCP implementation.
+///
+/// If real DCP support is built later, this project only ever needs the
+/// *verification* side (validate an incoming self-issued token/Verifiable
+/// Presentation from a caller who already has real DID/Credential-Service
+/// infrastructure) - a planned future test drives this connector with a
+/// real EDC instance acting as the credentialed caller, so token
+/// issuance, DID hosting, and the Credential Service itself don't need
+/// implementing here. Candidate crates for that verification path,
+/// surveyed but not adopted here: `ssi` (spruceid; DIDs, JWT/LD-proof VCs
+/// and VPs) plus its `did-web`/`did-jwk` method crates, or a narrower
+/// `jsonwebtoken`-based JWT check if only the self-issued-token layer
+/// (not full VP/credential validation) turns out to be needed. That work
+/// would replace what `authorize` does with the token here, rather than
+/// needing a new trait or abstraction layer over these functions.
+#[derive(Debug, Clone, Default)]
+pub struct DspAuthConfig {
+    pub mode: DspAuthMode,
+    /// Bearer token -> the set of dataset ids that token's caller may
+    /// see. A presented token with no entry here sees an empty catalog,
+    /// not an error - once auth is enabled, unrecognized callers are
+    /// denied by default rather than falling back to the full catalog.
+    /// Only consulted in `DspAuthMode::Bearer`.
+    pub catalog_access: HashMap<String, HashSet<String>>,
+    /// Required (and only meaningful) when `mode` is `DspAuthMode::Dcp`.
+    /// `main` guarantees the two stay consistent when loading config
+    /// from the environment - see `load_dsp_auth` in `main.rs`.
+    pub dcp: Option<DcpConfig>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DspAuthMode {
+    /// No auth check, no filtering: every caller sees the full catalog.
+    /// This is the pre-existing behavior and the default, so anything
+    /// that doesn't opt in via `DSP_AUTH_MODE` is unaffected.
+    #[default]
+    Disabled,
+    /// The DSP catalog endpoints require an `Authorization: Bearer
+    /// <token>` header (presence only - not cryptographically verified)
+    /// and filter the catalog to what `catalog_access` grants that
+    /// token.
+    Bearer,
+    /// The DSP catalog endpoints require a real Decentralized Claims
+    /// Protocol self-issued token: this connector resolves the caller's
+    /// `did:web`, verifies the token's signature, re-packages its
+    /// nested presentation-access-token with this connector's own key
+    /// (DCP's proof-of-original-possession step), queries the caller's
+    /// Presentation API, and verifies the returned Verifiable
+    /// Presentation and its embedded Verifiable Credential(s) - see
+    /// `dcp::verify_dcp_bearer_token` and
+    /// `compliance/dcp-test-env/README.md` for the full flow and what
+    /// this was validated against.
+    Dcp,
+}
+
+/// Shared application state: the cache, behind a trait object so the
 /// concrete backend (in-memory today, RDF-backed later) is an
-/// implementation detail of `main`, not of the router.
+/// implementation detail of `main`, not of the router; plus DSP auth
+/// config (disabled unless `main` opts it in from `DSP_AUTH_MODE`).
 #[derive(Clone)]
 pub struct AppState {
     pub cache: Arc<dyn CatalogCache>,
+    pub dsp_auth: DspAuthConfig,
+    /// Shared HTTP client for `DspAuthMode::Dcp`'s outbound calls (DID
+    /// resolution, presentation queries) - `reqwest::Client` is cheap to
+    /// clone (internally `Arc`-backed) and reuses connection pooling, so
+    /// one instance lives on `AppState` rather than being constructed
+    /// per request.
+    pub http: reqwest::Client,
 }
 
 impl AppState {
     pub fn new(cache: Arc<dyn CatalogCache>) -> Self {
-        Self { cache }
+        Self {
+            cache,
+            dsp_auth: DspAuthConfig::default(),
+            http: reqwest::Client::new(),
+        }
+    }
+
+    /// Builder-style setter for DSP auth config. Kept as a plain setter
+    /// rather than a `new()` parameter so existing callers (tests, and
+    /// any future consumer that doesn't care about auth) don't need to
+    /// change.
+    pub fn with_dsp_auth(mut self, dsp_auth: DspAuthConfig) -> Self {
+        self.dsp_auth = dsp_auth;
+        self
     }
 }
 
@@ -45,18 +142,33 @@ impl AppState {
 /// same way a real crawl result would, through the public `CatalogCache`
 /// trait, so it exercises the same end-to-end path as production code
 /// rather than poking the cache's internals.
+///
+/// Dataset ids (`CAT0101`, `CAT0102`) are deliberately aligned with
+/// `vendor/eclipse-edc-connector`'s own DSP-TCK seed data
+/// (`system-tests/tck/tck-extension/.../DataSeed.java`), specifically the
+/// `CAT0xxx`-prefixed subset it reserves for the catalog-protocol test
+/// group (as opposed to its `ACN0xxx`/`ATP0xxx` ids, used by the
+/// contract-negotiation/transfer-process groups this project doesn't
+/// implement). This gives the Rust and EDC catalog-request responses the
+/// same dataset *count and ids* to compare against
+/// (`compliance/benchmark-2026-08-27.md`), even though the two
+/// implementations still diverge on everything else about how those
+/// datasets are represented on the wire (see that report's fidelity
+/// section).
 pub async fn seed_sample_catalog(cache: &dyn CatalogCache) -> StoreResult<()> {
     let node = NodeId::new("sample-participant");
     let mut catalog = Catalog::new("sample-catalog", node);
     catalog.participant_id = Some("did:example:sample-participant".to_string());
-    catalog.datasets.push(Dataset {
-        id: "sample-dataset".to_string(),
-        properties: Default::default(),
-        distributions: vec![Distribution {
-            format: "application/json".to_string(),
-            access_service: "sample-data-service".to_string(),
-        }],
-    });
+    for dataset_id in ["CAT0101", "CAT0102"] {
+        catalog.datasets.push(Dataset {
+            id: dataset_id.to_string(),
+            properties: Default::default(),
+            distributions: vec![Distribution {
+                format: "application/json".to_string(),
+                access_service: "sample-data-service".to_string(),
+            }],
+        });
+    }
     catalog.data_services.push(DataService {
         id: "sample-data-service".to_string(),
         endpoint_url: "https://sample.example.org/dsp".to_string(),
@@ -75,7 +187,21 @@ pub fn build_router(state: AppState) -> Router {
         .route("/.well-known/dspace-version", get(dspace_version))
         .route("/dsp/catalog/request", post(catalog_request))
         .route("/dsp/catalog/datasets/{id}", get(get_dsp_dataset))
+        // Only meaningful under DspAuthMode::Dcp (see dcp.rs's module
+        // doc comment) - hosts this connector's own did:web document so
+        // a holder's Presentation API can verify the re-packaged token
+        // this connector sends it. Harmless to expose otherwise (404s
+        // via an empty catalog access if `dsp_auth.dcp` is unset - see
+        // `own_did_document_route`).
+        .route("/dsp/did.json", get(own_did_document_route))
         .with_state(state)
+}
+
+async fn own_did_document_route(State(state): State<AppState>) -> impl IntoResponse {
+    match &state.dsp_auth.dcp {
+        Some(dcp_config) => (StatusCode::OK, Json(dcp_config.own_did_document())).into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -174,14 +300,14 @@ async fn dspace_version() -> Json<DspaceVersionResponse> {
     })
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct DspPermission {
     #[serde(rename = "@type")]
     ld_type: String,
     action: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct DspOffer {
     #[serde(rename = "@id")]
     id: String,
@@ -208,7 +334,7 @@ fn placeholder_offer() -> DspOffer {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct DspDistribution {
     #[serde(rename = "@type")]
     ld_type: String,
@@ -232,7 +358,7 @@ impl From<Distribution> for DspDistribution {
 /// /dsp/catalog/datasets/{id}`); when nested inside a `Catalog`'s
 /// `dataset` array it is omitted, since JSON-LD framing is only needed at
 /// the document root.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct DspDataset {
     #[serde(rename = "@context", skip_serializing_if = "Option::is_none")]
     context: Option<Vec<String>>,
@@ -257,7 +383,7 @@ impl From<Dataset> for DspDataset {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct DspDataService {
     #[serde(rename = "@id")]
     id: String,
@@ -277,7 +403,7 @@ impl From<DataService> for DspDataService {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct DspCatalog {
     #[serde(rename = "@context")]
     context: Vec<String>,
@@ -291,7 +417,7 @@ struct DspCatalog {
     service: Vec<DspDataService>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct DspCatalogError {
     #[serde(rename = "@context")]
     context: Vec<String>,
@@ -310,6 +436,87 @@ impl DspCatalogError {
             ld_type: "CatalogError".to_string(),
             code: "NOT_FOUND".to_string(),
         }
+    }
+
+    fn unauthorized() -> Self {
+        Self {
+            context: vec![DSP_CONTEXT_URL.to_string()],
+            id: new_urn_uuid(),
+            ld_type: "CatalogError".to_string(),
+            code: "UNAUTHORIZED".to_string(),
+        }
+    }
+}
+
+/// Gate a DSP request per `auth`, returning the caller's bearer token (if
+/// any) on success, already resolved to the set of dataset ids that
+/// caller may see. `Ok(None)` means auth is disabled - callers should
+/// treat that the same as "no filtering, full catalog". `Err(response)`
+/// is a fully-formed 401 response to return immediately.
+///
+/// Bearer mode: the token is a presence check, not a verified identity -
+/// see `DspAuthConfig`'s doc comment for why. Dcp mode: real signature
+/// verification and DID resolution via `dcp::verify_dcp_bearer_token` -
+/// see that module's doc comment for the full flow.
+async fn authorize(
+    auth: &DspAuthConfig,
+    headers: &HeaderMap,
+    http: &reqwest::Client,
+) -> Result<Option<HashSet<String>>, Box<axum::response::Response>> {
+    if auth.mode == DspAuthMode::Disabled {
+        return Ok(None);
+    }
+
+    let token = headers
+        .get(AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .map(str::trim)
+        .filter(|token| !token.is_empty());
+    let Some(token) = token else {
+        return Err(unauthorized_response());
+    };
+
+    match auth.mode {
+        DspAuthMode::Disabled => unreachable!("handled above"),
+        // An unrecognized token sees nothing (empty set), not an error:
+        // once auth is enabled, unrecognized callers are denied by
+        // default rather than falling back to the unfiltered catalog.
+        DspAuthMode::Bearer => Ok(Some(auth.catalog_access.get(token).cloned().unwrap_or_default())),
+        DspAuthMode::Dcp => {
+            let dcp_config = auth
+                .dcp
+                .as_ref()
+                .expect("DspAuthMode::Dcp always carries a DcpConfig - see load_dsp_auth in main.rs");
+            match dcp::verify_dcp_bearer_token(token, dcp_config, http).await {
+                Ok(verified) => {
+                    tracing::info!(holder = %verified.holder_did, granted = verified.catalog_access.len(), "DCP token verified");
+                    Ok(Some(verified.catalog_access))
+                }
+                Err(err) => {
+                    tracing::warn!(error = %err, "DCP token verification failed");
+                    Err(unauthorized_response())
+                }
+            }
+        }
+    }
+}
+
+fn unauthorized_response() -> Box<axum::response::Response> {
+    Box::new((StatusCode::UNAUTHORIZED, Json(DspCatalogError::unauthorized())).into_response())
+}
+
+/// Filter `datasets` down to `allowed` (already-resolved dataset ids, see
+/// `authorize`). `allowed: None` means auth is disabled - return
+/// everything, matching this endpoint's pre-existing behavior. An empty
+/// result is a valid response here, not an error -
+/// `catalog_request`'s doc comment already establishes that for the
+/// "cache is empty" case, and it applies equally to "cache is non-empty
+/// but nothing in it is visible to this caller".
+fn visible_datasets(allowed: Option<&HashSet<String>>, datasets: Vec<Dataset>) -> Vec<Dataset> {
+    match allowed {
+        None => datasets,
+        Some(allowed_ids) => datasets.into_iter().filter(|dataset| allowed_ids.contains(&dataset.id)).collect(),
     }
 }
 
@@ -333,14 +540,27 @@ async fn flatten_cache(cache: &dyn CatalogCache) -> StoreResult<(Vec<Dataset>, V
 /// `POST /dsp/catalog/request` - the DSP catalog protocol's "give me the
 /// catalog" operation. The request body (a `CatalogRequestMessage`, which
 /// may carry filters in a real implementation) is intentionally ignored
-/// for now: this always returns the full flattened catalog.
+/// for now: filtering is per-caller (via `DspAuthConfig`), not per-request.
 ///
-/// Must never return 404, even when the cache is empty - the TCK's HTTP
-/// client treats any 404 on this path as a hard failure. An empty
-/// `dataset: []` is a perfectly valid response.
-async fn catalog_request(State(state): State<AppState>) -> impl IntoResponse {
+/// When `state.dsp_auth.mode` is `Disabled` (the default), this always
+/// returns the full flattened catalog, matching this endpoint's original
+/// behavior. When it's `Bearer`, a missing/malformed `Authorization`
+/// header 401s (see `authorize`), and the returned `dataset` array is
+/// filtered to what that caller's token grants (see `visible_datasets`).
+///
+/// Must never return 404, even when the cache is empty or nothing is
+/// visible to this caller - the TCK's HTTP client treats any 404 on this
+/// path as a hard failure. An empty `dataset: []` is a perfectly valid
+/// response either way.
+async fn catalog_request(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    let allowed = match authorize(&state.dsp_auth, &headers, &state.http).await {
+        Ok(allowed) => allowed,
+        Err(response) => return *response,
+    };
+
     match flatten_cache(&*state.cache).await {
         Ok((datasets, services)) => {
+            let datasets = visible_datasets(allowed.as_ref(), datasets);
             let body = DspCatalog {
                 context: vec![DSP_CONTEXT_URL.to_string()],
                 id: new_urn_uuid(),
@@ -362,14 +582,22 @@ async fn catalog_request(State(state): State<AppState>) -> impl IntoResponse {
 }
 
 /// `GET /dsp/catalog/datasets/{id}` - look up one dataset by id across the
-/// same flattened view `catalog_request` serves. Found: 200 with a
-/// `Dataset` JSON-LD document. Not found: 404 with a `CatalogError`
-/// document (this route, unlike `catalog_request`, is allowed - and
-/// expected by the TCK - to 404).
+/// same flattened, per-caller-filtered view `catalog_request` serves.
+/// Found (and visible to this caller): 200 with a `Dataset` JSON-LD
+/// document. Not found, *or* it exists but this caller's token doesn't
+/// grant it: 404 with a `CatalogError` document - deliberately the same
+/// response either way, so this endpoint doesn't leak which datasets
+/// exist to a caller who can't see them.
 async fn get_dsp_dataset(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
+    let allowed = match authorize(&state.dsp_auth, &headers, &state.http).await {
+        Ok(allowed) => allowed,
+        Err(response) => return *response,
+    };
+
     let (datasets, _services) = match flatten_cache(&*state.cache).await {
         Ok(flattened) => flattened,
         Err(err) => {
@@ -382,6 +610,7 @@ async fn get_dsp_dataset(
                 .into_response();
         }
     };
+    let datasets = visible_datasets(allowed.as_ref(), datasets);
 
     match datasets.into_iter().find(|dataset| dataset.id == id) {
         Some(dataset) => {
@@ -495,8 +724,9 @@ mod tests {
         let catalog = &parsed.catalogs[0];
         assert_eq!(catalog.id, "sample-catalog");
         assert_eq!(catalog.origin_node, NodeId::new("sample-participant"));
-        assert_eq!(catalog.datasets.len(), 1);
-        assert_eq!(catalog.datasets[0].id, "sample-dataset");
+        assert_eq!(catalog.datasets.len(), 2);
+        let dataset_ids: Vec<&str> = catalog.datasets.iter().map(|d| d.id.as_str()).collect();
+        assert_eq!(dataset_ids, vec!["CAT0101", "CAT0102"]);
         assert_eq!(catalog.data_services.len(), 1);
     }
 
@@ -524,5 +754,144 @@ mod tests {
         let body = response.into_body().collect().await.unwrap().to_bytes();
         let parsed: CatalogListResponse = serde_json::from_slice(&body).unwrap();
         assert!(parsed.catalogs.is_empty());
+    }
+
+    // --- DSP catalog endpoint auth/filtering (`DspAuthConfig`) ---------
+
+    async fn seeded_dsp_state(dsp_auth: DspAuthConfig) -> AppState {
+        let state = AppState::new(Arc::new(InMemoryCatalogCache::new())).with_dsp_auth(dsp_auth);
+        seed_sample_catalog(&*state.cache).await.unwrap();
+        state
+    }
+
+    fn bearer_auth(access: &[(&str, &[&str])]) -> DspAuthConfig {
+        DspAuthConfig {
+            mode: DspAuthMode::Bearer,
+            catalog_access: access
+                .iter()
+                .map(|(token, ids)| {
+                    (
+                        token.to_string(),
+                        ids.iter().map(|id| id.to_string()).collect::<HashSet<_>>(),
+                    )
+                })
+                .collect(),
+            dcp: None,
+        }
+    }
+
+    async fn post_catalog_request(app: Router, bearer_token: Option<&str>) -> axum::response::Response {
+        let mut builder = Request::builder()
+            .method("POST")
+            .uri("/dsp/catalog/request")
+            .header("content-type", "application/json");
+        if let Some(token) = bearer_token {
+            builder = builder.header("authorization", format!("Bearer {token}"));
+        }
+        app.oneshot(builder.body(Body::from("{}")).unwrap())
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn dsp_catalog_request_disabled_mode_ignores_missing_auth_header() {
+        // The pre-existing, default behavior: DspAuthMode::Disabled means
+        // no gate at all, regardless of what's seeded or configured.
+        let state = seeded_dsp_state(DspAuthConfig::default()).await;
+        let app = build_router(state);
+        let response = post_catalog_request(app, None).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let parsed: DspCatalog = serde_json::from_slice(&body).unwrap();
+        assert_eq!(parsed.dataset.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn dsp_catalog_request_bearer_mode_requires_auth_header() {
+        let state = seeded_dsp_state(bearer_auth(&[])).await;
+        let app = build_router(state);
+        let response = post_catalog_request(app, None).await;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let parsed: DspCatalogError = serde_json::from_slice(&body).unwrap();
+        assert_eq!(parsed.code, "UNAUTHORIZED");
+    }
+
+    #[tokio::test]
+    async fn dsp_catalog_request_bearer_mode_denies_unknown_caller_by_default() {
+        let state = seeded_dsp_state(bearer_auth(&[])).await;
+        let app = build_router(state);
+        // A syntactically valid bearer token, but not in catalog_access.
+        let response = post_catalog_request(app, Some("nobody-configured")).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let parsed: DspCatalog = serde_json::from_slice(&body).unwrap();
+        assert!(parsed.dataset.is_empty());
+    }
+
+    #[tokio::test]
+    async fn dsp_catalog_request_bearer_mode_filters_per_caller() {
+        let auth = bearer_auth(&[
+            ("consumer-a-token", &["CAT0101"]),
+            ("consumer-b-token", &["CAT0101", "CAT0102"]),
+        ]);
+        let state = seeded_dsp_state(auth).await;
+        let app = build_router(state);
+
+        let response_a = post_catalog_request(app.clone(), Some("consumer-a-token")).await;
+        assert_eq!(response_a.status(), StatusCode::OK);
+        let body_a = response_a.into_body().collect().await.unwrap().to_bytes();
+        let parsed_a: DspCatalog = serde_json::from_slice(&body_a).unwrap();
+        assert_eq!(
+            parsed_a.dataset.iter().map(|d| d.id.as_str()).collect::<Vec<_>>(),
+            vec!["CAT0101"]
+        );
+
+        let response_b = post_catalog_request(app, Some("consumer-b-token")).await;
+        assert_eq!(response_b.status(), StatusCode::OK);
+        let body_b = response_b.into_body().collect().await.unwrap().to_bytes();
+        let parsed_b: DspCatalog = serde_json::from_slice(&body_b).unwrap();
+        let mut ids_b: Vec<&str> = parsed_b.dataset.iter().map(|d| d.id.as_str()).collect();
+        ids_b.sort_unstable();
+        assert_eq!(ids_b, vec!["CAT0101", "CAT0102"]);
+    }
+
+    #[tokio::test]
+    async fn dsp_dataset_lookup_404s_for_a_dataset_that_exists_but_isnt_visible_to_caller() {
+        let auth = bearer_auth(&[("consumer-a-token", &["CAT0101"])]);
+        let state = seeded_dsp_state(auth).await;
+        let app = build_router(state);
+
+        // CAT0101 is granted to this caller: visible.
+        let visible = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/dsp/catalog/datasets/CAT0101")
+                    .header("authorization", "Bearer consumer-a-token")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(visible.status(), StatusCode::OK);
+
+        // CAT0102 exists (it's in the seeded catalog) but isn't granted to
+        // this caller: same 404 as a genuinely nonexistent id, not a 403 -
+        // this endpoint shouldn't leak existence to callers who can't see it.
+        let not_granted = app
+            .oneshot(
+                Request::builder()
+                    .uri("/dsp/catalog/datasets/CAT0102")
+                    .header("authorization", "Bearer consumer-a-token")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(not_granted.status(), StatusCode::NOT_FOUND);
     }
 }
