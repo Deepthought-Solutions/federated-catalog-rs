@@ -482,6 +482,25 @@ struct DspCatalog {
     participant_id: String,
     dataset: Vec<DspDataset>,
     service: Vec<DspDataService>,
+    /// DSP's own `catalog` field (JSON-LD `dspace:catalog`) for
+    /// representing a federation of catalogs - one nested `Catalog` per
+    /// crawled participant. Confirmed against `dsp-tck`'s own
+    /// `catalog-schema.json` (`Catalog.catalog`: `array`, `minItems: 1`,
+    /// items `$ref` back to `Catalog` itself - the same optional-but-
+    /// nonempty-when-present shape as `dataset` and `service` on that same
+    /// schema node, not required at all).
+    ///
+    /// Empty (and omitted from the JSON entirely via
+    /// `skip_serializing_if`, satisfying `minItems: 1` by never emitting a
+    /// present-but-empty array) whenever the cache holds 0 or 1 origin
+    /// nodes - the pre-existing flat shape, byte-identical to before this
+    /// field existed. When the cache holds 2+ origin nodes, this carries
+    /// one entry per node (that node's own `participantId`, and only its
+    /// own, already auth-filtered `dataset`/`service` entries) and the
+    /// outer document's own `dataset`/`service` are left empty - see
+    /// `catalog_request`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    catalog: Vec<DspCatalog>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -588,20 +607,37 @@ fn visible_datasets(allowed: Option<&HashSet<String>>, datasets: Vec<Dataset>) -
 }
 
 /// Flatten every dataset (with its origin catalog's data services) out of
-/// every catalog currently in the cache. This project's `CatalogCache`
-/// models one crawled catalog per participant; the DSP catalog protocol
-/// exposed here is this connector's own aggregate/federated view over all
-/// of them - conceptually the same flattening EDC's own federated catalog
-/// does over its crawled catalogs.
-async fn flatten_cache(cache: &dyn CatalogCache) -> StoreResult<(Vec<Dataset>, Vec<DataService>)> {
-    let catalogs = cache.query(CatalogQuery::all()).await?;
+/// `catalogs`, discarding which origin node each came from.
+///
+/// NOTE: an earlier version of this comment claimed this was "conceptually
+/// the same flattening EDC's own federated catalog does over its crawled
+/// catalogs" - that was wrong, and is now known to be wrong (see
+/// `compliance/harvest-benchmark-2026-08-27.md`): EDC's federated-catalog
+/// Management API never merges crawled participants together, it returns
+/// one `Catalog` object per crawled participant. Flattening across origin
+/// nodes is only ever correct here when there's at most one origin node to
+/// begin with, in which case there's nothing to lose by discarding origin
+/// identity. `catalog_request` uses this for exactly that single-node (or
+/// empty-cache) case, and separately for `get_dsp_dataset`'s by-id lookup,
+/// which doesn't care about origin either way. For 2+ origin nodes,
+/// `catalog_request` does NOT call this - it nests one `DspCatalog` per
+/// node in the outer document's own `catalog` field instead, matching
+/// EDC's own per-participant grouping.
+fn flatten_catalogs(catalogs: Vec<Catalog>) -> (Vec<Dataset>, Vec<DataService>) {
     let mut datasets = Vec::new();
     let mut services = Vec::new();
     for catalog in catalogs {
         datasets.extend(catalog.datasets);
         services.extend(catalog.data_services);
     }
-    Ok((datasets, services))
+    (datasets, services)
+}
+
+/// `flatten_catalogs` over the cache's full contents - see that function's
+/// doc comment for what "flatten" means and does not mean here.
+async fn flatten_cache(cache: &dyn CatalogCache) -> StoreResult<(Vec<Dataset>, Vec<DataService>)> {
+    let catalogs = cache.query(CatalogQuery::all()).await?;
+    Ok(flatten_catalogs(catalogs))
 }
 
 /// `POST /dsp/catalog/request` - the DSP catalog protocol's "give me the
@@ -609,47 +645,106 @@ async fn flatten_cache(cache: &dyn CatalogCache) -> StoreResult<(Vec<Dataset>, V
 /// may carry filters in a real implementation) is intentionally ignored
 /// for now: filtering is per-caller (via `DspAuthConfig`), not per-request.
 ///
-/// When `state.dsp_auth.mode` is `Disabled` (the default), this always
-/// returns the full flattened catalog, matching this endpoint's original
-/// behavior. When it's `Bearer`, a missing/malformed `Authorization`
-/// header 401s (see `authorize`), and the returned `dataset` array is
-/// filtered to what that caller's token grants (see `visible_datasets`).
+/// When `state.dsp_auth.mode` is `Disabled` (the default), auth doesn't
+/// filter anything. When it's `Bearer`, a missing/malformed `Authorization`
+/// header 401s (see `authorize`), and the returned dataset(s) are filtered
+/// to what that caller's token grants (see `visible_datasets`).
+///
+/// The response shape itself depends on how many distinct origin nodes
+/// (crawled participants) the cache currently holds:
+///
+/// - **0 or 1**: byte-identical to this endpoint's original, pre-federation
+///   behavior - a flat top-level `dataset`/`service`, and `catalog: []`
+///   (omitted from the JSON, see `DspCatalog::catalog`'s doc comment).
+/// - **2+**: the outer document becomes a pure federation wrapper - its own
+///   `dataset`/`service` are left empty, and one nested `DspCatalog` per
+///   origin node is emitted in the outer document's `catalog` field, each
+///   carrying only that node's own (auth-filtered) datasets/services and
+///   its own `participantId`. A node with zero datasets visible to this
+///   caller after filtering is omitted from `catalog` entirely, not
+///   included as an empty entry - the same "don't leak existence to a
+///   caller who can't see it" principle `get_dsp_dataset` already applies
+///   per-dataset.
 ///
 /// Must never return 404, even when the cache is empty or nothing is
 /// visible to this caller - the TCK's HTTP client treats any 404 on this
-/// path as a hard failure. An empty `dataset: []` is a perfectly valid
-/// response either way.
+/// path as a hard failure. An empty `dataset: []` (or an empty/absent
+/// `catalog`) is a perfectly valid response either way.
 async fn catalog_request(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
     let allowed = match authorize(&state.dsp_auth, &headers, &state.http).await {
         Ok(allowed) => allowed,
         Err(response) => return *response,
     };
 
-    match flatten_cache(&*state.cache).await {
-        Ok((datasets, services)) => {
-            let datasets = visible_datasets(allowed.as_ref(), datasets);
-            let body = DspCatalog {
-                context: vec![DSP_CONTEXT_URL.to_string()],
-                id: new_urn_uuid(),
-                ld_type: "Catalog".to_string(),
-                participant_id: CONNECTOR_PARTICIPANT_ID.to_string(),
-                dataset: datasets.into_iter().map(Into::into).collect(),
-                service: services.into_iter().map(Into::into).collect(),
-            };
-            (StatusCode::OK, Json(body)).into_response()
+    let catalogs = match state.cache.query(CatalogQuery::all()).await {
+        Ok(catalogs) => catalogs,
+        Err(err) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: err.to_string(),
+                }),
+            )
+                .into_response();
         }
-        Err(err) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-                error: err.to_string(),
-            }),
-        )
-            .into_response(),
-    }
+    };
+
+    let body = if catalogs.len() <= 1 {
+        // 0 or 1 origin node: nothing to preserve structurally, keep the
+        // pre-existing flat shape exactly.
+        let (datasets, services) = flatten_catalogs(catalogs);
+        let datasets = visible_datasets(allowed.as_ref(), datasets);
+        DspCatalog {
+            context: vec![DSP_CONTEXT_URL.to_string()],
+            id: new_urn_uuid(),
+            ld_type: "Catalog".to_string(),
+            participant_id: CONNECTOR_PARTICIPANT_ID.to_string(),
+            dataset: datasets.into_iter().map(Into::into).collect(),
+            service: services.into_iter().map(Into::into).collect(),
+            catalog: Vec::new(),
+        }
+    } else {
+        // 2+ origin nodes: nest one DspCatalog per node, filtered per-node
+        // (not once globally after flattening), and drop any node left
+        // with zero visible datasets rather than leak its existence.
+        let nested: Vec<DspCatalog> = catalogs
+            .into_iter()
+            .filter_map(|catalog| {
+                let participant_id = catalog.participant_id.clone().unwrap_or_else(|| catalog.origin_node.to_string());
+                let datasets = visible_datasets(allowed.as_ref(), catalog.datasets);
+                if datasets.is_empty() {
+                    return None;
+                }
+                Some(DspCatalog {
+                    context: vec![DSP_CONTEXT_URL.to_string()],
+                    id: new_urn_uuid(),
+                    ld_type: "Catalog".to_string(),
+                    participant_id,
+                    dataset: datasets.into_iter().map(Into::into).collect(),
+                    service: catalog.data_services.into_iter().map(Into::into).collect(),
+                    catalog: Vec::new(),
+                })
+            })
+            .collect();
+        DspCatalog {
+            context: vec![DSP_CONTEXT_URL.to_string()],
+            id: new_urn_uuid(),
+            ld_type: "Catalog".to_string(),
+            participant_id: CONNECTOR_PARTICIPANT_ID.to_string(),
+            dataset: Vec::new(),
+            service: Vec::new(),
+            catalog: nested,
+        }
+    };
+
+    (StatusCode::OK, Json(body)).into_response()
 }
 
-/// `GET /dsp/catalog/datasets/{id}` - look up one dataset by id across the
-/// same flattened, per-caller-filtered view `catalog_request` serves.
+/// `GET /dsp/catalog/datasets/{id}` - look up one dataset by id, flattened
+/// across every origin node in the cache regardless of how many there are
+/// (unlike `catalog_request`, which nests per origin node once there are
+/// 2+ - by-id lookup doesn't care which participant a dataset came from,
+/// so there's nothing to preserve by keeping them separate here).
 /// Found (and visible to this caller): 200 with a `Dataset` JSON-LD
 /// document. Not found, *or* it exists but this caller's token doesn't
 /// grant it: 404 with a `CatalogError` document - deliberately the same
@@ -984,6 +1079,7 @@ mod tests {
             .unwrap();
         assert_eq!(not_granted.status(), StatusCode::NOT_FOUND);
     }
+
     // --- Per-origin-node nesting in `catalog_request` (bug: today's
     // `flatten_cache` always merges every cached node's datasets into one
     // flat top-level `dataset` array, discarding which participant each

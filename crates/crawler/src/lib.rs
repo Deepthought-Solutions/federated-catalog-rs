@@ -166,6 +166,22 @@ async fn crawl_one(
 ///
 /// A response missing `dataset` and/or `service` entirely is not an error
 /// - it produces a `Catalog` with empty `datasets`/`data_services`.
+///
+/// Also tolerates a "federation of federations" response - one where the
+/// crawled participant is itself a multi-participant aggregator (e.g.
+/// another instance of this workspace's own `http-api`, once it has 2+
+/// origin nodes cached: see `http-api`'s `catalog_request`) and so nests
+/// its real content under a top-level `catalog` array instead of top-level
+/// `dataset`/`service`. This crate's own data model is one `Catalog` per
+/// configured target participant, not per nested sub-participant, so any
+/// nested `catalog[]` entries found are flattened into the *same* returned
+/// `Catalog` right alongside the top-level entries (recursively, in case a
+/// nested entry is itself nested) - which participant a dataset nested
+/// several levels down originally came from is not preserved, only that it
+/// isn't silently dropped. Without this, a crawl target returning a purely
+/// nested response (empty top-level `dataset`/`service`, matching what
+/// `catalog_request` now does for 2+ cached origin nodes) would parse as
+/// an apparently-empty catalog.
 fn parse_catalog_response(value: &Value, participant: &ParticipantEntry) -> Catalog {
     let id = value
         .get("@id")
@@ -176,9 +192,20 @@ fn parse_catalog_response(value: &Value, participant: &ParticipantEntry) -> Cata
     let mut catalog = Catalog::new(id, NodeId::new(participant.id.clone()));
     catalog.participant_id = value.get("participantId").and_then(Value::as_str).map(str::to_string);
 
-    // Top-level `service` entries first, so a dataset's nested
-    // `accessService` object (parsed below) can be folded in without
-    // duplicating one already listed here.
+    collect_datasets_and_services(value, &mut catalog);
+
+    catalog
+}
+
+/// Extract `value`'s own `service`/`dataset` entries into `catalog`, then
+/// recurse into any nested `catalog[]` entries doing the same - see
+/// `parse_catalog_response`'s doc comment for why. `value` is either the
+/// top-level response body or one nested `catalog[]` entry; both share the
+/// same `service`/`dataset`/`catalog` shape.
+fn collect_datasets_and_services(value: &Value, catalog: &mut Catalog) {
+    // `service` entries first, so a dataset's nested `accessService`
+    // object (parsed below) can be folded in without duplicating one
+    // already listed here.
     if let Some(services) = value.get("service").and_then(Value::as_array) {
         for service_value in services {
             if let Some(service) = parse_data_service(service_value) {
@@ -240,7 +267,11 @@ fn parse_catalog_response(value: &Value, participant: &ParticipantEntry) -> Cata
         }
     }
 
-    catalog
+    if let Some(nested_catalogs) = value.get("catalog").and_then(Value::as_array) {
+        for nested_value in nested_catalogs {
+            collect_datasets_and_services(nested_value, catalog);
+        }
+    }
 }
 
 /// Extract a `DataService` from either a top-level `service` array entry
@@ -419,6 +450,68 @@ mod tests {
         let catalog = parse_catalog_response(&body, &participant);
         assert_eq!(catalog.datasets.len(), 1);
         assert_eq!(catalog.datasets[0].id, "CAT0102");
+    }
+
+    /// "Federation of federations": the crawled participant is itself a
+    /// multi-participant aggregator (another instance of this workspace's
+    /// own `http-api`, once it has 2+ origin nodes cached - see
+    /// `http-api::catalog_request`'s doc comment), so its response has
+    /// empty top-level `dataset`/`service` and nests everything under
+    /// `catalog[]` instead, one entry per sub-participant. Without
+    /// flattening those nested entries, this would silently parse as an
+    /// empty catalog even though the crawled node advertised 10 datasets.
+    #[test]
+    fn flattens_nested_catalog_entries_from_a_federation_of_federations_response() {
+        let body = json!({
+            "@id": "urn:uuid:outer-wrapper",
+            "@type": "Catalog",
+            "participantId": "urn:connector:upstream-aggregator",
+            "dataset": [],
+            "service": [],
+            "catalog": [
+                {
+                    "@id": "urn:uuid:node-a-catalog",
+                    "@type": "Catalog",
+                    "participantId": "did:example:node-a",
+                    "dataset": [
+                        {
+                            "@id": "A1",
+                            "distribution": [{"format": "application/json", "accessService": "node-a-data-service"}]
+                        }
+                    ],
+                    "service": [{"@id": "node-a-data-service", "endpointURL": "https://node-a.example.org/dsp"}]
+                },
+                {
+                    "@id": "urn:uuid:node-b-catalog",
+                    "@type": "Catalog",
+                    "participantId": "did:example:node-b",
+                    "dataset": [
+                        {
+                            "@id": "B1",
+                            "distribution": [{"format": "application/json", "accessService": "node-b-data-service"}]
+                        }
+                    ],
+                    "service": [{"@id": "node-b-data-service", "endpointURL": "https://node-b.example.org/dsp"}]
+                }
+            ]
+        });
+        let participant = participant("upstream-aggregator-participant");
+        let catalog = parse_catalog_response(&body, &participant);
+
+        // One Catalog per configured target participant is this crate's
+        // own model - nested sub-participant identity isn't preserved,
+        // only that the data isn't dropped. The outer wrapper's own
+        // participantId is what's kept.
+        assert_eq!(catalog.origin_node, NodeId::new("upstream-aggregator-participant"));
+        assert_eq!(catalog.participant_id.as_deref(), Some("urn:connector:upstream-aggregator"));
+
+        let mut dataset_ids: Vec<&str> = catalog.datasets.iter().map(|d| d.id.as_str()).collect();
+        dataset_ids.sort();
+        assert_eq!(dataset_ids, vec!["A1", "B1"]);
+
+        let mut service_ids: Vec<&str> = catalog.data_services.iter().map(|s| s.id.as_str()).collect();
+        service_ids.sort();
+        assert_eq!(service_ids, vec!["node-a-data-service", "node-b-data-service"]);
     }
 
     #[tokio::test]
