@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" role="img"
-     aria-label="The harvester runs inside one participant's own connector. It plays the DSP Consumer role: it issues one separate CatalogRequestMessage per remote Catalog Service (never a single combined federation request), per the Dataspace Protocol's own Replication Protocol section. Results are cached internally. The connector's http-api then exposes two distinct surfaces: GET /catalog, an internal, non-DSP endpoint serving the harvested aggregate to this participant's own operator/tooling; and POST /dsp/catalog/request, a DSP-conformant endpoint that answers other participants with only this connector's own hosted catalog, not the harvested aggregate.">
+     aria-label="This product implements the Dataspace Protocol's own Catalog Broker role, running inside one participant's own connector alongside that connector's other components. A Catalog Broker is a Consumer with trusted access to 1..N upstream Catalog Services that advertises their respective catalogs as one - it issues one separate CatalogRequestMessage per remote Catalog Service, per the Dataspace Protocol's own Replication Protocol section, and never answers such requests itself. Answering incoming DSP CatalogRequestMessage is explicitly the job of the connector's other components, not this product. Harvested results land in an internal semantic (RDF) cache, served only through two non-DSP surfaces: a per-participant dataset list, and a SPARQL query endpoint over the whole store. An optional DCP holder identity lets the crawler present this participant's own credential when a remote Catalog Service requires one.">
   <style>
     .bg { fill: #ffffff; }
     .participant { fill: #f8fafc; stroke: #334155; stroke-width: 1.5; }
@@ -7,13 +7,14 @@
     .cache { fill: #ecfdf5; stroke: #047857; stroke-width: 1.5; }
     .remote { fill: #fef9f5; stroke: #c2410c; stroke-width: 1.25; }
     .consumer { fill: #f5f3ff; stroke: #6d28d9; stroke-width: 1.25; }
+    .other { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 1.25; stroke-dasharray: 4 3; }
     .label { fill: #0f172a; font-family: -apple-system, Segoe UI, Helvetica, Arial, sans-serif; font-size: 13px; }
     .sublabel { fill: #1e293b; font-family: -apple-system, Segoe UI, Helvetica, Arial, sans-serif; font-size: 11.5px; }
     .caption { fill: #475569; font-family: -apple-system, Segoe UI, Helvetica, Arial, sans-serif; font-size: 11px; }
     .title { fill: #0f172a; font-family: -apple-system, Segoe UI, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; }
     .cachetext { fill: #065f46; }
+    .othertext { fill: #475569; }
     .dsp-out { stroke: #2563eb; stroke-width: 1.5; fill: none; }
-    .dsp-in { stroke: #0891b2; stroke-width: 1.5; fill: none; }
     .internal { stroke: #047857; stroke-width: 1.5; fill: none; }
     .query { stroke: #6d28d9; stroke-width: 1.5; fill: none; }
     @media (prefers-color-scheme: dark) {
@@ -23,13 +24,14 @@
       .cache { fill: #052e21; stroke: #34d399; }
       .remote { fill: #2a1608; stroke: #fb923c; }
       .consumer { fill: #1e1b3a; stroke: #a78bfa; }
+      .other { fill: #1e293b; stroke: #64748b; }
       .label { fill: #e2e8f0; }
       .sublabel { fill: #e2e8f0; }
       .caption { fill: #94a3b8; }
       .title { fill: #f1f5f9; }
       .cachetext { fill: #6ee7b7; }
+      .othertext { fill: #cbd5e1; }
       .dsp-out { stroke: #60a5fa; }
-      .dsp-in { stroke: #22d3ee; }
       .internal { stroke: #34d399; }
       .query { stroke: #a78bfa; }
     }
@@ -37,9 +39,6 @@
   <defs>
     <marker id="arrow-dsp-out" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#2563eb" />
-    </marker>
-    <marker id="arrow-dsp-in" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="#0891b2" />
     </marker>
     <marker id="arrow-internal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#047857" />
@@ -51,47 +50,50 @@
 
   <rect class="bg" x="0" y="0" width="1000" height="640" />
 
-  <text class="title" x="500" y="28" text-anchor="middle">Deployment: the harvester runs inside one participant's own connector</text>
-  <text class="caption" x="500" y="46" text-anchor="middle">It plays the DSP "Consumer" role — the spec makes federation a consumer-side responsibility, not a provider feature</text>
+  <text class="title" x="500" y="26" text-anchor="middle">Deployment: a DSP Catalog Broker running inside one participant's own connector</text>
+  <text class="caption" x="500" y="44" text-anchor="middle">A Consumer with trusted access to 1..N Catalog Services, advertising them as one — the spec's own "Catalog Broker" role</text>
 
   <!-- Participant's own connector -->
-  <rect class="participant" x="40" y="80" width="420" height="480" rx="8" />
-  <text class="title" x="250" y="106" text-anchor="middle">This participant's connector (federated-catalog-rs)</text>
+  <rect class="participant" x="40" y="70" width="420" height="490" rx="8" />
+  <text class="title" x="250" y="96" text-anchor="middle">This participant's connector</text>
 
   <!-- crawler box -->
-  <rect class="box" x="64" y="128" width="372" height="88" rx="6" />
-  <text class="label" x="250" y="150" text-anchor="middle">crates/crawler — the harvester</text>
-  <text class="sublabel" x="250" y="170" text-anchor="middle">spawn_scheduler(): tokio::time::interval tick</text>
-  <text class="sublabel" x="250" y="188" text-anchor="middle">crawl_once(): one CatalogRequestMessage per</text>
-  <text class="sublabel" x="250" y="203" text-anchor="middle">configured participant, never a combined request</text>
+  <rect class="box" x="64" y="116" width="372" height="82" rx="6" />
+  <text class="label" x="250" y="136" text-anchor="middle">crates/crawler — this product's crawl engine</text>
+  <text class="sublabel" x="250" y="154" text-anchor="middle">crawl_once(): one CatalogRequestMessage per</text>
+  <text class="sublabel" x="250" y="169" text-anchor="middle">configured participant, never a combined request</text>
+  <text class="caption" x="250" y="186" text-anchor="middle">optional: presents a DCP credential if the target requires one</text>
 
   <!-- semantic cache box -->
-  <rect class="cache" x="64" y="248" width="372" height="96" rx="6" />
-  <text class="cachetext title" x="250" y="270" text-anchor="middle">Semantic cache (Oxigraph)</text>
-  <text class="cachetext sublabel" x="250" y="290" text-anchor="middle">rdf_store::oxigraph_backend::OxigraphCatalogCache</text>
-  <text class="cachetext sublabel" x="250" y="306" text-anchor="middle">one named graph per crawled origin node</text>
-  <text class="cachetext caption" x="250" y="324" text-anchor="middle">(see semantic-cache-architecture.svg for internals)</text>
+  <rect class="cache" x="64" y="230" width="372" height="90" rx="6" />
+  <text class="cachetext title" x="250" y="252" text-anchor="middle">Semantic cache — unified triple store</text>
+  <text class="cachetext sublabel" x="250" y="272" text-anchor="middle">rdf_store::oxigraph_backend, one graph per node</text>
+  <text class="cachetext caption" x="250" y="290" text-anchor="middle">(see semantic-cache-architecture.svg for internals)</text>
+  <text class="cachetext caption" x="250" y="306" text-anchor="middle">target: real triples, not the current JSON-blob bridge</text>
 
-  <!-- http-api box -->
-  <rect class="box" x="64" y="368" width="372" height="168" rx="6" />
-  <text class="label" x="250" y="390" text-anchor="middle">http-api</text>
-  <rect class="cache" x="84" y="404" width="332" height="52" rx="5" opacity="0.6" />
-  <text class="sublabel" x="250" y="424" text-anchor="middle">GET /catalog — internal, non-DSP</text>
-  <text class="caption" x="250" y="442" text-anchor="middle">serves the harvested aggregate to this operator only</text>
-  <rect class="box" x="84" y="464" width="332" height="56" rx="5" />
-  <text class="sublabel" x="250" y="484" text-anchor="middle">POST /dsp/catalog/request — DSP-conformant</text>
-  <text class="caption" x="250" y="502" text-anchor="middle">answers with this connector's OWN hosted catalog only</text>
+  <!-- http-api box: only the two sanctioned serving surfaces -->
+  <rect class="box" x="64" y="344" width="372" height="128" rx="6" />
+  <text class="label" x="250" y="366" text-anchor="middle">http-api — this product's only serving surfaces</text>
+  <rect class="cache" x="84" y="378" width="332" height="40" rx="5" opacity="0.6" />
+  <text class="sublabel" x="250" y="402" text-anchor="middle">Dataset list per participant (non-DSP)</text>
+  <rect class="cache" x="84" y="424" width="332" height="40" rx="5" opacity="0.6" />
+  <text class="sublabel" x="250" y="448" text-anchor="middle">SPARQL query endpoint (non-DSP)</text>
+
+  <!-- What this product explicitly does NOT do -->
+  <rect class="other" x="64" y="488" width="372" height="58" rx="6" />
+  <text class="othertext label" x="250" y="508" text-anchor="middle">No DSP catalog-serving here</text>
+  <text class="othertext caption" x="250" y="526" text-anchor="middle">answering CatalogRequestMessage is out of scope for this product</text>
 
   <!-- Operator/internal consumer -->
-  <rect class="consumer" x="120" y="556" width="260" height="56" rx="6" />
-  <text class="label" x="250" y="578" text-anchor="middle">Operator / internal tooling</text>
-  <text class="caption" x="250" y="596" text-anchor="middle">the only consumer of the aggregate view</text>
-  <path class="query" marker-end="url(#arrow-query)" d="M 250,556 L 250,536" />
+  <rect class="consumer" x="120" y="566" width="260" height="56" rx="6" />
+  <text class="label" x="250" y="588" text-anchor="middle">Operator / internal tooling</text>
+  <text class="caption" x="250" y="606" text-anchor="middle">list datasets, or run SPARQL, over the cache</text>
+  <path class="query" marker-end="url(#arrow-query)" d="M 250,566 L 250,472" />
 
   <!-- Remote catalog services -->
   <rect class="remote" x="600" y="100" width="360" height="70" rx="6" />
   <text class="label" x="780" y="126" text-anchor="middle">Remote Catalog Service A</text>
-  <text class="caption" x="780" y="146" text-anchor="middle">any DSP provider — real EDC or another federated-catalog-rs</text>
+  <text class="caption" x="780" y="146" text-anchor="middle">any DSP provider — real EDC or another connector</text>
 
   <rect class="remote" x="600" y="190" width="360" height="70" rx="6" />
   <text class="label" x="780" y="216" text-anchor="middle">Remote Catalog Service B</text>
@@ -101,26 +103,25 @@
   <text class="label" x="780" y="306" text-anchor="middle">Remote Catalog Service N</text>
   <text class="caption" x="780" y="326" text-anchor="middle">crates/crawler polls each one independently</text>
 
-  <!-- Other DSP consumer, receiving from this connector -->
-  <rect class="remote" x="600" y="464" width="360" height="70" rx="6" />
-  <text class="label" x="780" y="490" text-anchor="middle">Another DSP participant</text>
-  <text class="caption" x="780" y="510" text-anchor="middle">queries this connector's own catalog, same as any provider</text>
-
   <!-- Outbound DSP requests: crawler -> A, B, N -->
-  <path class="dsp-out" marker-end="url(#arrow-dsp-out)" d="M 436,150 C 520,150 520,135 600,135" />
-  <path class="dsp-out" marker-end="url(#arrow-dsp-out)" d="M 436,166 C 540,166 540,225 600,225" />
-  <path class="dsp-out" marker-end="url(#arrow-dsp-out)" d="M 436,182 C 560,182 560,315 600,315" />
-  <text class="caption" x="520" y="86" text-anchor="middle">1..N separate POST .../catalog/request calls (Consumer role)</text>
+  <path class="dsp-out" marker-end="url(#arrow-dsp-out)" d="M 436,140 C 520,140 520,135 600,135" />
+  <path class="dsp-out" marker-end="url(#arrow-dsp-out)" d="M 436,158 C 540,158 540,225 600,225" />
+  <path class="dsp-out" marker-end="url(#arrow-dsp-out)" d="M 436,176 C 560,176 560,315 600,315" />
+  <text class="caption" x="520" y="82" text-anchor="middle">1..N separate POST .../catalog/request calls (Consumer role only)</text>
 
   <!-- crawler -> cache upsert -->
-  <path class="internal" marker-end="url(#arrow-internal)" d="M 250,216 L 250,248" />
-  <text class="caption" x="330" y="238" text-anchor="middle">upsert()</text>
+  <path class="internal" marker-end="url(#arrow-internal)" d="M 250,198 L 250,230" />
+  <text class="caption" x="330" y="220" text-anchor="middle">upsert()</text>
 
-  <!-- cache -> http-api query (both routes) -->
-  <path class="internal" marker-end="url(#arrow-internal)" d="M 200,344 L 200,404" />
-  <path class="internal" marker-end="url(#arrow-internal)" d="M 300,344 L 300,464" />
-  <text class="caption" x="150" y="378" text-anchor="middle">query()</text>
+  <!-- cache -> http-api query -->
+  <path class="internal" marker-end="url(#arrow-internal)" d="M 250,320 L 250,344" />
+  <text class="caption" x="330" y="336" text-anchor="middle">query() / SPARQL</text>
 
-  <!-- Inbound DSP request from another participant -->
-  <path class="dsp-in" marker-end="url(#arrow-dsp-in)" d="M 600,492 L 436,492" />
+  <!-- Note on where remote participants' DID/DCP presentation callback lands -->
+  <rect class="other" x="600" y="380" width="360" height="96" rx="6" />
+  <text class="othertext label" x="780" y="402" text-anchor="middle">This connector's other components</text>
+  <text class="othertext sublabel" x="780" y="422" text-anchor="middle">answer incoming DSP CatalogRequestMessage,</text>
+  <text class="othertext sublabel" x="780" y="438" text-anchor="middle">and any DCP presentation-query callback aimed</text>
+  <text class="othertext sublabel" x="780" y="454" text-anchor="middle">at THIS participant's own identity</text>
+  <text class="othertext caption" x="780" y="470" text-anchor="middle">out of scope for this product</text>
 </svg>
