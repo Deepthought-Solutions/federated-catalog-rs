@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Scheduled catalog crawler: polls a local-config participant registry's DSP catalog endpoints (with optional DCP holder support) and upserts results into rdf-store's CatalogCache."
+description = "The Federated Catalog Semantic Harvester's crawl engine: polls a local-config participant registry's DSP catalog endpoints (with optional DCP holder support), playing the DSP Consumer role, and upserts results into rdf-store's semantic (Oxigraph-backed) CatalogCache."
 
 [dependencies]
 catalog-core = { path = "../catalog-core" }

@@ -1,7 +1,14 @@
-# federated-catalog-rs
+# Federated Catalog Semantic Harvester
+
+*(repo/package name: `federated-catalog-rs`)*
 
 An iterative, from-scratch Rust rewrite of [Eclipse EDC](https://projects.eclipse.org/projects/technology.edc)'s
-**Federated Catalog** module.
+**Federated Catalog** module — a **harvester** that plays the Dataspace
+Protocol's Consumer role at one participant's own connector, crawling
+1..N remote Catalog Services and landing the results in a **semantic
+cache** (an RDF/Oxigraph-backed store, see
+["The RDF backend"](#the-rdf-backend-semantic-cache) below) queryable
+locally without re-crawling on every request.
 
 ## What this is (and isn't)
 
