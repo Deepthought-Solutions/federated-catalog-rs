@@ -46,3 +46,33 @@ SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
 [0;32mINFO 2026-08-27T15:56:18.539824033 federated-catalog-rs crawler-edc-fixture: catalog seed: seeded 3 asset(s) [HARVEST-D-01, HARVEST-D-02, HARVEST-D-03] under participantContextId='HARVEST-D'[0m
 [0;32mINFO 2026-08-27T15:56:19.198263293 89 service extensions started[0m
 [0;32mINFO 2026-08-27T15:56:19.198991738 Runtime a525c9c0-dd1a-4631-8797-c9221bfa3621 ready[0m
+[0;32mINFO 2026-08-27T16:35:58.900356823 Booting EDC runtime[0m
+[0;33mWARNING 2026-08-27T16:35:58.915540592 Configuration file does not exist: dataspaceconnector-configuration.properties. Ignoring.[0m
+[0;32mINFO 2026-08-27T16:35:59.034695374 federated-catalog-rs crawler-edc-fixture: no-op identity: registered FixtureNoopIdentityService (no real auth - out of scope, see module doc comment)[0m
+[0;32mINFO 2026-08-27T16:35:59.062846518 HTTPS enforcement it not enabled, please enable it in a production environment[0m
+[0;33mWARNING 2026-08-27T16:35:59.243340087 Config value: no setting found for 'edc.hostname', falling back to default value 'localhost'[0m
+[0;33mWARNING 2026-08-27T16:35:59.314538201 Using the InMemoryVault is not suitable for production scenarios and should be replaced with an actual Vault![0m
+[0;33mWARNING 2026-08-27T16:35:59.316182404 No TransactionContext registered, a no-op implementation will be used, not suitable for production environments[0m
+[0;33mWARNING 2026-08-27T16:35:59.329852376 No TokenDecorator was registered. The 'scope' field of outgoing protocol messages will be empty[0m
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[0;33mWARNING 2026-08-27T16:35:59.640907575 [Delegated API Authentication] No audience configured for delegated authentication, defaulting to the participantId[0m
+[0;32mINFO 2026-08-27T16:35:59.653863268 federated-catalog-rs crawler-edc-fixture: catalog seed: seeded 3 asset(s) [HARVEST-D-01, HARVEST-D-02, HARVEST-D-03] under participantContextId='HARVEST-D'[0m
+[0;32mINFO 2026-08-27T16:36:00.416810554 89 service extensions started[0m
+[0;32mINFO 2026-08-27T16:36:00.417446056 Runtime fc1df3a7-69ea-4bc8-9b86-f9da9b7e0098 ready[0m
+[0;32mINFO 2026-08-27T16:39:33.939309578 Booting EDC runtime[0m
+[0;33mWARNING 2026-08-27T16:39:33.962631743 Configuration file does not exist: dataspaceconnector-configuration.properties. Ignoring.[0m
+[0;32mINFO 2026-08-27T16:39:34.096474449 federated-catalog-rs crawler-edc-fixture: no-op identity: registered FixtureNoopIdentityService (no real auth - out of scope, see module doc comment)[0m
+[0;32mINFO 2026-08-27T16:39:34.12995428 HTTPS enforcement it not enabled, please enable it in a production environment[0m
+[0;33mWARNING 2026-08-27T16:39:34.359848156 Config value: no setting found for 'edc.hostname', falling back to default value 'localhost'[0m
+[0;33mWARNING 2026-08-27T16:39:34.434048644 Using the InMemoryVault is not suitable for production scenarios and should be replaced with an actual Vault![0m
+[0;33mWARNING 2026-08-27T16:39:34.435841356 No TransactionContext registered, a no-op implementation will be used, not suitable for production environments[0m
+[0;33mWARNING 2026-08-27T16:39:34.44881845 No TokenDecorator was registered. The 'scope' field of outgoing protocol messages will be empty[0m
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[0;33mWARNING 2026-08-27T16:39:34.775409767 [Delegated API Authentication] No audience configured for delegated authentication, defaulting to the participantId[0m
+[0;32mINFO 2026-08-27T16:39:34.789484082 federated-catalog-rs crawler-edc-fixture: catalog seed: seeded 3 asset(s) [HARVEST-D-01, HARVEST-D-02, HARVEST-D-03] under participantContextId='HARVEST-D'[0m
+[0;32mINFO 2026-08-27T16:39:35.488846072 89 service extensions started[0m
+[0;32mINFO 2026-08-27T16:39:35.489917666 Runtime a9720be6-bad4-4ea7-b6c6-1bdb9713c1d8 ready[0m

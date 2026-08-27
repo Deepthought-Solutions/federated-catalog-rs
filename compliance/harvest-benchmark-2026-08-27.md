@@ -2,6 +2,30 @@
 
 **Date:** 2026-08-27
 
+**Corrected re-run (same date):** the first pass through this benchmark
+exposed a real bug - Rust's `POST /dsp/catalog/request` flattened every
+crawled participant's datasets into one `Catalog`'s `dataset` array,
+while EDC's own federated-catalog Management API kept one `Catalog`
+object per crawled participant. That asymmetry was visible in this
+report's own "Aggregated dataset count served" row (originally: `10
+(flattened into 1 Catalog)` vs. `10 (across 2 Catalog entries, one per
+crawled participant)`) and has since been fixed in
+`crates/http-api/src/lib.rs`'s `catalog_request` (nest one `DspCatalog`
+per origin node under a top-level `catalog[]` field, matching EDC's own
+per-participant grouping, whenever the cache holds 2+ distinct origin
+nodes) plus a matching gap-fix in `crates/crawler/src/lib.rs`'s response
+parser (it only ever read a flat top-level `dataset`/`service`, so a
+response shaped like the fixed endpoint's own new nested output would
+have silently parsed as empty). `compliance/harvest-bench/check_catalog.py`
+was updated to match (its Rust-side dataset-id extraction now recurses
+into `catalog[]`, in addition to the pre-existing top-level `dataset`
+array - the EDC-side extraction was re-read and needed no change, see
+below). Every number in this report - RSS/CPU/throughput/latency and the
+correctness/shape evidence - is from a **fresh, real re-run** with the
+fix in place, not the original run's numbers with the table edited in
+place. The original numbers are not reproduced here; see this file's own
+git history for the pre-fix version if needed.
+
 **Question:** unlike the two prior benchmark rounds
 ([`benchmark-2026-08-27.md`](benchmark-2026-08-27.md),
 [`benchmark-dcp-2026-08-27.md`](benchmark-dcp-2026-08-27.md)), which both
@@ -15,9 +39,9 @@ first-party federated-catalog crawler component.
 
 **Answer: both work, both stayed correct under concurrent load, and the
 resource-usage gap from the prior two rounds holds up again here** - Rust
-used roughly **70x less peak RSS** and **about half the average CPU**
-(~566% vs. ~1,158% of one core, i.e. ~5.7 vs. ~11.6 of the host's 22
-cores) of EDC's own crawler, while serving **~89x higher throughput**,
+used roughly **68x less peak RSS** and **about half the average CPU**
+(~561% vs. ~1,150% of one core, i.e. ~5.6 vs. ~11.5 of the host's 22
+cores) of EDC's own crawler, while serving **~86x higher throughput**,
 under the same 20-VU/30s k6 load with the harvest loop actively
 re-crawling in the background on both sides throughout. See "What this
 doesn't prove" below for the real, substantial caveats on that comparison
@@ -89,7 +113,14 @@ crawler + Oxigraph store + hand-serialized DSP endpoint.
 - `compliance/harvest-bench/check_catalog.py` - queries either system's
   own catalog-serving endpoint and asserts the result contains **exactly**
   the 10 expected dataset ids, used as the correctness check both before
-  and immediately after each load-test window.
+  and immediately after each load-test window. Updated in this corrected
+  re-run: `dataset_ids_from_catalog` now recurses into a `catalog[]`
+  field, in addition to the pre-existing top-level `dataset` array, so it
+  is robust to either shape - Rust's endpoint nests per-participant
+  sub-catalogs there once 2+ origin nodes are cached (see the top note),
+  while EDC's Management API response was re-read (not assumed) and
+  never carries a `catalog[]` field on its own `Catalog` objects, so the
+  recursion is a no-op for the EDC path.
 - `compliance/harvest-bench/run-harvest-bench.sh` - the end-to-end driver
   that ran everything below, with trap-based cleanup.
 
@@ -194,11 +225,11 @@ throughout the load). Real output, both systems, both checkpoints:
 ```
 $ python3 check_catalog.py edc  http://127.0.0.1:19411/api/management/v3/catalogs/request   # before load
 OK ['HARVEST-D-01', 'HARVEST-D-02', 'HARVEST-D-03', 'HARVEST-E-01', 'HARVEST-E-02', 'HARVEST-E-03', 'HARVEST-E-04', 'HARVEST-E-05', 'HARVEST-E-06', 'HARVEST-E-07']
-$ python3 check_catalog.py edc  http://127.0.0.1:19411/api/management/v3/catalogs/request   # after 23,542 requests of load
+$ python3 check_catalog.py edc  http://127.0.0.1:19411/api/management/v3/catalogs/request   # after 22,577 requests of load
 OK ['HARVEST-D-01', 'HARVEST-D-02', 'HARVEST-D-03', 'HARVEST-E-01', 'HARVEST-E-02', 'HARVEST-E-03', 'HARVEST-E-04', 'HARVEST-E-05', 'HARVEST-E-06', 'HARVEST-E-07']
 $ python3 check_catalog.py rust http://127.0.0.1:19501/dsp/catalog/request                  # before load
 OK ['HARVEST-D-01', 'HARVEST-D-02', 'HARVEST-D-03', 'HARVEST-E-01', 'HARVEST-E-02', 'HARVEST-E-03', 'HARVEST-E-04', 'HARVEST-E-05', 'HARVEST-E-06', 'HARVEST-E-07']
-$ python3 check_catalog.py rust http://127.0.0.1:19501/dsp/catalog/request                  # after 2,100,017 requests of load
+$ python3 check_catalog.py rust http://127.0.0.1:19501/dsp/catalog/request                  # after 1,932,236 requests of load
 OK ['HARVEST-D-01', 'HARVEST-D-02', 'HARVEST-D-03', 'HARVEST-E-01', 'HARVEST-E-02', 'HARVEST-E-03', 'HARVEST-E-04', 'HARVEST-E-05', 'HARVEST-E-06', 'HARVEST-E-07']
 ```
 
@@ -208,22 +239,120 @@ sustained concurrent reads, corrupted or dropped data on either side, for
 this scenario (small, static seed data on the crawled participants - see
 caveats below).
 
+### Real response shape, both sides (evidence for the fix)
+
+`check_catalog.py OK` only proves the recovered *id set* is right; it
+doesn't by itself show the *shape* the fix claims. Both raw responses
+below are real captures from this corrected re-run (Rust: a live `curl`
+against the actual benchmarked `http-api` process, mid-run, while k6 load
+was in flight; EDC: a live `curl` against a real EDC federated-catalog
+crawler instance, brought up the same way as the benchmarked one, for
+this specific evidence capture).
+
+**Rust** (`POST /dsp/catalog/request`, 2 cached origin nodes) - top-level
+`dataset`/`service` are empty, both participants' 10 datasets are nested
+under `catalog[]`, one entry per origin node:
+
+```json
+{
+  "@context": ["https://w3id.org/dspace/2025/1/context.jsonld"],
+  "@id": "urn:uuid:344e561f-c145-47af-af5e-6f467feac2c6",
+  "@type": "Catalog",
+  "participantId": "urn:connector:federated-catalog-rs",
+  "dataset": [],
+  "service": [],
+  "catalog": [
+    {
+      "@id": "urn:uuid:ef2cd79a-8055-44c6-a6db-56d65caae464",
+      "@type": "Catalog",
+      "participantId": "HARVEST-D",
+      "dataset": [
+        { "@id": "HARVEST-D-03", "@type": "Dataset", "...": "..." },
+        { "@id": "HARVEST-D-01", "@type": "Dataset", "...": "..." },
+        { "@id": "HARVEST-D-02", "@type": "Dataset", "...": "..." }
+      ]
+    },
+    {
+      "@id": "...",
+      "@type": "Catalog",
+      "participantId": "HARVEST-E",
+      "dataset": [ "...7 HARVEST-E-* datasets..." ]
+    }
+  ]
+}
+```
+
+**EDC** (`POST /api/management/v3/catalogs/request`) - a top-level JSON
+array of 2 `Catalog` objects, each with its own flat `dataset` array and
+`participantId` (this shape is unchanged by the fix - it's EDC's own,
+pre-existing behavior, reproduced here for a real side-by-side, not
+reused from the original run):
+
+```json
+[
+  {
+    "@id": "cf5b6b6b-a970-4ae8-97d1-be30fead18a9",
+    "@type": "Catalog",
+    "participantId": "HARVEST-D",
+    "dataset": [
+      { "@id": "HARVEST-D-03", "@type": "Dataset", "...": "..." },
+      { "@id": "HARVEST-D-01", "@type": "Dataset", "...": "..." },
+      { "@id": "HARVEST-D-02", "@type": "Dataset", "...": "..." }
+    ],
+    "service": [{ "@type": "DataService", "endpointURL": "http://localhost:19221/api/dsp/2025-1" }]
+  },
+  {
+    "@id": "6e393b64-2bf7-44a5-bd30-c64ac1c61049",
+    "@type": "Catalog",
+    "participantId": "HARVEST-E",
+    "dataset": [ "...7 HARVEST-E-* datasets..." ],
+    "service": [{ "@type": "DataService", "endpointURL": "http://localhost:19321/api/dsp/2025-1" }]
+  }
+]
+```
+
+Both are genuinely one-entry-per-crawled-participant now: EDC nests via a
+top-level array of `Catalog`, Rust nests via one `Catalog`'s own
+`catalog[]` field - a different DSP-legal encoding of the same
+"federation of catalogs, not one merged catalog" structure, which is
+exactly the asymmetry the fix closes (see the top note and the summary
+table's "Aggregated dataset count served" row below).
+
+**One more genuine, previously-unobserved fidelity difference, visible
+only now that both responses are captured side by side for the same
+scenario:** EDC's Management API response is a **bare JSON array** at the
+document root, with no `@context`/`@id`/`@type` wrapper around the two
+`Catalog` entries at all - not itself a single JSON-LD document. Rust's
+response, even in the federated/nested case, stays **one self-consistent
+JSON-LD document throughout** (`@context` at the root, `@type: "Catalog"`,
+the two participants nested under `catalog[]` rather than hoisted to the
+response root). This tracks a real, structural difference between the two
+APIs being compared, not just an implementation quirk: EDC's Management
+API is that operator's own internal REST surface (JSON-LD is used
+per-object, not for API envelope shape), while `http-api`'s `/dsp/...`
+endpoints are DSP-protocol-facing throughout, so every response - single-
+participant or federated - is DSP/JSON-LD-framed the same way. Neither is
+"wrong"; it's a real consequence of comparing a Management API against a
+DSP-protocol endpoint for the same underlying question ("give me the
+federated catalog"), which is itself one of this comparison's limits (see
+"What this doesn't prove" below).
+
 ## Summary table
 
 | Metric | Rust (`crates/crawler` + `http-api`) | EDC 0.18.0 federated-catalog crawler (Java) |
 |---|---:|---:|
-| RSS at sampling start (pre-load, harvest loop already warm) | 13.2 MB (13,516 KB) | 304.6 MB (311,860 KB) |
-| Peak RSS (harvest + load combined) | 18.73 MB (19,176 KB) | 1,302.1 MB (1,333,360 KB) |
-| Avg CPU during the 30s load window | ~566% (~5.7 cores of 22) | ~1,158% (~11.6 cores of 22) |
-| Throughput | 69,999.4 req/s | 784.2 req/s |
-| Latency avg | 229.14 µs | 25.40 ms |
-| Latency p50 (median) | 205.37 µs | 25.33 ms |
-| Latency p90 | 352.17 µs | 35.46 ms |
-| Latency p95 | 416.6 µs | 38.92 ms |
-| Latency p99 | 650.47 µs | 48.17 ms |
-| Latency max | 13.37 ms | 129.32 ms |
-| Error rate | 0.00% (2,100,017/2,100,017 OK) | 0.00% (23,542/23,542 OK) |
-| Aggregated dataset count served | 10 (flattened into 1 `Catalog`) | 10 (across 2 `Catalog` entries, one per crawled participant) |
+| RSS at sampling start (pre-load, harvest loop already warm) | 13.45 MB (13,772 KB) | 304.4 MB (311,676 KB) |
+| Peak RSS (harvest + load combined) | 18.36 MB (18,804 KB) | 1,258.2 MB (1,288,420 KB) |
+| Avg CPU during the 30s load window | ~561% (~5.6 cores of 22) | ~1,150% (~11.5 cores of 22) |
+| Throughput | 64,407.27 req/s | 752.08 req/s |
+| Latency avg | 251.47 µs | 26.48 ms |
+| Latency p50 (median) | 225.6 µs | 26.49 ms |
+| Latency p90 | 390.24 µs | 37.87 ms |
+| Latency p95 | 464.15 µs | 41.23 ms |
+| Latency p99 | 719.15 µs | 49.44 ms |
+| Latency max | 10.35 ms | 125.88 ms |
+| Error rate | 0.00% (1,932,236/1,932,236 OK) | 0.00% (22,577/22,577 OK) |
+| Aggregated dataset count served | 10 (across 2 nested `Catalog` entries under `catalog[]`, one per crawled participant) | 10 (across 2 `Catalog` entries, one per crawled participant) |
 | Correctness under concurrent harvest+load | OK (both checkpoints) | OK (both checkpoints) |
 
 Environment: 22 logical cores (`nproc`), `CLK_TCK=100` - same host as both
@@ -232,9 +361,13 @@ prior reports.
 **This round's data volumes are symmetric for the first time** - unlike
 the original report's 17-vs-1-dataset mismatch, both systems here
 aggregate the same real 10 datasets from the same two real EDC
-participants. This makes the throughput/latency comparison meaningfully
-tighter than the prior two rounds, though still not a full
-apples-to-apples implementation comparison - see below.
+participants. As of this corrected re-run, the **structural shape** is
+now symmetric too, not just the count: both sides return one `Catalog`
+per crawled participant rather than Rust merging everything into a
+single flat list (see "Real response shape, both sides" above). This
+makes the throughput/latency comparison meaningfully tighter than the
+prior two rounds, though still not a full apples-to-apples implementation
+comparison - see below.
 
 ## What this doesn't prove
 
@@ -263,14 +396,15 @@ apples-to-apples implementation comparison - see below.
   reader" was exercised (the crawler rewriting the aggregate store every
   5s while k6 read it), but "does the aggregate store correctly converge
   when the *underlying* data is *also* changing mid-benchmark" was not.
-- **`rust-http-api.log` came back empty** despite the Rust side
-  demonstrably working correctly (correctness checks + 2.1M successful k6
-  requests are the real evidence) - `tracing_subscriber`'s buffered writer
-  never flushed before the process was `kill`ed (SIGTERM, not a graceful
-  shutdown path), so no textual startup/crawl log survives from this run
-  on the Rust side. Noted honestly rather than fabricating log content;
-  it does not affect any number in the table above, all of which come
-  from k6's own output and the `/proc`-based sampler.
+- **`rust-http-api.log` came back empty again in this corrected re-run**
+  despite the Rust side demonstrably working correctly (correctness
+  checks + 1.93M successful k6 requests are the real evidence) -
+  `tracing_subscriber`'s buffered writer never flushed before the process
+  was `kill`ed (SIGTERM, not a graceful shutdown path), so no textual
+  startup/crawl log survives from this run on the Rust side, same as the
+  original run. Noted honestly rather than fabricating log content; it
+  does not affect any number in the table above, all of which come from
+  k6's own output and the `/proc`-based sampler.
 - **Single run, no repetition, coarse 1s RSS/CPU sampling, short windows**
   - same caveats as both prior reports, not repeated in full here.
   **JVM warmup/JIT** is a real confound for the EDC crawler figures here
@@ -288,37 +422,55 @@ apples-to-apples implementation comparison - see below.
 
 ## Cleanup
 
+`run-harvest-bench.sh` itself runs a full port sweep and PID-based kill
+(with a `kill -9` fallback) in an `EXIT` trap. Real output from this
+corrected re-run:
+
 ```
-$ ps -ef | grep "BaseRuntime" | grep -v grep | grep "java "
+[run-harvest-bench] === SUMMARY ===
+[run-harvest-bench] EDC   correctness: early=OK  late=OK
+[run-harvest-bench] Rust  correctness: early=OK  late=OK
+[run-harvest-bench] cleanup: killing any tracked PIDs and sweeping ports 19201|19211|19221|19231|19241|19251|19261|19301|19311|19321|19331|19341|19351|19361|19401|19411|19421|19431|19451|19461|19501
+[run-harvest-bench] post-cleanup port sweep:
+[run-harvest-bench]   (clean - no listeners in this benchmark's port range)
+```
+
+Re-verified independently afterward (not just trusting the trap), same
+pattern as every prior round:
+
+```
+$ ss -tlnp | grep -E "19201|19211|19221|19231|19241|19251|19261|19301|19311|19321|19331|19341|19351|19361|19401|19411|19421|19431|19451|19461|19501"
 (no output - clean)
 $ pgrep -x java
-(no output - clean, after also stopping a leftover Gradle daemon:)
+(no output - clean)
+$ docker ps -a | grep -iE "harvest|edc|fedcat"
+(no output - clean)
+```
+
+One real, honestly-reported slip during cleanup verification, same as the
+original run: a Gradle daemon (from this session's own
+`./gradlew printClasspath` pre-flight invocations) was still running
+after the driver script's own trap-based cleanup finished (expected - the
+driver never manages Gradle daemons, only the long-running `java`/`k6`
+processes it starts). Caught by a `pgrep -fa java` sweep and stopped:
+
+```
 $ (cd compliance/crawler-edc-fixture && ./gradlew --stop)
 Stopping Daemon(s)
 1 Daemon stopped
 $ (cd compliance/harvest-bench/edc-fedcat-runtime && ./gradlew --stop)
 No Gradle daemons are running.
-$ ss -tlnp | grep -E "19201|19211|19221|19231|19241|19251|19261|19301|19311|19321|19331|19341|19351|19361|19401|19411|19421|19431|19451|19461|19501"
-(no output - clean)
 ```
 
-`run-harvest-bench.sh` itself also runs a full port sweep and PID-based
-kill (with a `kill -9` fallback) in an `EXIT` trap, verified in the actual
-run this report's numbers came from:
-
-```
-[run-harvest-bench] cleanup: killing any tracked PIDs and sweeping ports 19201|19211|...|19501
-[run-harvest-bench] post-cleanup port sweep:
-[run-harvest-bench]   (clean - no listeners in this benchmark's port range)
-```
-
-One real, honestly-reported slip during cleanup verification: a Gradle
-daemon from this session's own `./gradlew printClasspath` invocations was
-still running after the driver script's own trap-based cleanup finished
-(expected - the driver never manages Gradle daemons, only the long-running
-`java`/`k6` processes it starts). Caught by a `pgrep -x java` sweep (not
-just the ports the driver script itself tracks) and stopped via
-`./gradlew --stop` in both Gradle projects, then re-verified clean.
+Separately, this report's "Real response shape, both sides" evidence
+section above required one extra short-lived, ad hoc verification run
+(HARVEST-D/E + the EDC crawler brought back up just long enough for one
+`curl` against the real Management API endpoint, no k6 load involved -
+the numbers in the summary table above are unaffected, they come only
+from the main `run-harvest-bench.sh` run) - that ad hoc script had its
+own trap-based cleanup and was independently re-verified clean afterward
+the same way (`ss -tlnp`, `pgrep -x java`, `docker ps -a`, all empty), and
+the throwaway script itself was deleted rather than left in the repo.
 
 ## Files
 
@@ -329,7 +481,9 @@ just the ports the driver script itself tracks) and stopped via
   config used.
 - `compliance/harvest-bench/catalog-request.k6.js` - the load-test script.
 - `compliance/harvest-bench/sample-rss-cpu.sh` - the RSS/CPU sampler.
-- `compliance/harvest-bench/check_catalog.py` - the correctness check.
+- `compliance/harvest-bench/check_catalog.py` - the correctness check
+  (updated in this corrected re-run to recurse into a nested `catalog[]`
+  field on the Rust side - see the top note).
 - `compliance/harvest-bench/run-harvest-bench.sh` - the end-to-end driver
   (results saved under a gitignored `results/`, regenerated by every run).
 - `compliance/harvest-bench/README.md` - how to re-run all of the above.

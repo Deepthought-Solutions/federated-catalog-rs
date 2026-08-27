@@ -31,7 +31,19 @@ def post(url, body, headers=None):
 
 
 def dataset_ids_from_catalog(catalog_obj):
-    return {ds.get("@id") for ds in catalog_obj.get("dataset", [])}
+    """Collect dataset ids from a DSP Catalog object, recursing into any
+    nested `catalog[]` entries. federated-catalog-rs's http-api nests one
+    `DspCatalog` per origin node under a top-level `catalog[]` (with the
+    outer document's own `dataset`/`service` left empty) whenever the
+    cache holds 2+ distinct origin nodes - see crates/http-api/src/lib.rs's
+    `catalog_request`. EDC's own Management API response (a flat top-level
+    `dataset` per Catalog, one Catalog per crawled participant, no nested
+    `catalog` field on either) is unaffected - the recursion is a no-op
+    when `catalog` is absent or empty."""
+    ids = {ds.get("@id") for ds in catalog_obj.get("dataset", [])}
+    for nested in catalog_obj.get("catalog", []):
+        ids |= dataset_ids_from_catalog(nested)
+    return ids
 
 
 def main():

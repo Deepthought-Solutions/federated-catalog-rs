@@ -46,3 +46,33 @@ SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
 [0;32mINFO 2026-08-27T15:56:18.633541102 federated-catalog-rs crawler-edc-fixture: catalog seed: seeded 7 asset(s) [HARVEST-E-01, HARVEST-E-02, HARVEST-E-03, HARVEST-E-04, HARVEST-E-05, HARVEST-E-06, HARVEST-E-07] under participantContextId='HARVEST-E'[0m
 [0;32mINFO 2026-08-27T15:56:19.313597298 89 service extensions started[0m
 [0;32mINFO 2026-08-27T15:56:19.314232198 Runtime 5a80f4c5-dd3b-4838-90dc-b011e1548f00 ready[0m
+[0;32mINFO 2026-08-27T16:35:58.933064193 Booting EDC runtime[0m
+[0;33mWARNING 2026-08-27T16:35:58.95513433 Configuration file does not exist: dataspaceconnector-configuration.properties. Ignoring.[0m
+[0;32mINFO 2026-08-27T16:35:59.119732967 federated-catalog-rs crawler-edc-fixture: no-op identity: registered FixtureNoopIdentityService (no real auth - out of scope, see module doc comment)[0m
+[0;32mINFO 2026-08-27T16:35:59.149700494 HTTPS enforcement it not enabled, please enable it in a production environment[0m
+[0;33mWARNING 2026-08-27T16:35:59.356302351 Config value: no setting found for 'edc.hostname', falling back to default value 'localhost'[0m
+[0;33mWARNING 2026-08-27T16:35:59.446448891 Using the InMemoryVault is not suitable for production scenarios and should be replaced with an actual Vault![0m
+[0;33mWARNING 2026-08-27T16:35:59.448250381 No TransactionContext registered, a no-op implementation will be used, not suitable for production environments[0m
+[0;33mWARNING 2026-08-27T16:35:59.467128186 No TokenDecorator was registered. The 'scope' field of outgoing protocol messages will be empty[0m
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[0;33mWARNING 2026-08-27T16:35:59.792416487 [Delegated API Authentication] No audience configured for delegated authentication, defaulting to the participantId[0m
+[0;32mINFO 2026-08-27T16:35:59.80562735 federated-catalog-rs crawler-edc-fixture: catalog seed: seeded 7 asset(s) [HARVEST-E-01, HARVEST-E-02, HARVEST-E-03, HARVEST-E-04, HARVEST-E-05, HARVEST-E-06, HARVEST-E-07] under participantContextId='HARVEST-E'[0m
+[0;32mINFO 2026-08-27T16:36:00.511876417 89 service extensions started[0m
+[0;32mINFO 2026-08-27T16:36:00.512417312 Runtime 38de71a3-7fc4-4a66-9911-c210a4498281 ready[0m
+[0;32mINFO 2026-08-27T16:39:33.940834348 Booting EDC runtime[0m
+[0;33mWARNING 2026-08-27T16:39:33.956258986 Configuration file does not exist: dataspaceconnector-configuration.properties. Ignoring.[0m
+[0;32mINFO 2026-08-27T16:39:34.069850942 federated-catalog-rs crawler-edc-fixture: no-op identity: registered FixtureNoopIdentityService (no real auth - out of scope, see module doc comment)[0m
+[0;32mINFO 2026-08-27T16:39:34.116915313 HTTPS enforcement it not enabled, please enable it in a production environment[0m
+[0;33mWARNING 2026-08-27T16:39:34.319298395 Config value: no setting found for 'edc.hostname', falling back to default value 'localhost'[0m
+[0;33mWARNING 2026-08-27T16:39:34.397162859 Using the InMemoryVault is not suitable for production scenarios and should be replaced with an actual Vault![0m
+[0;33mWARNING 2026-08-27T16:39:34.400027758 No TransactionContext registered, a no-op implementation will be used, not suitable for production environments[0m
+[0;33mWARNING 2026-08-27T16:39:34.42109775 No TokenDecorator was registered. The 'scope' field of outgoing protocol messages will be empty[0m
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[0;33mWARNING 2026-08-27T16:39:34.83287184 [Delegated API Authentication] No audience configured for delegated authentication, defaulting to the participantId[0m
+[0;32mINFO 2026-08-27T16:39:34.846011946 federated-catalog-rs crawler-edc-fixture: catalog seed: seeded 7 asset(s) [HARVEST-E-01, HARVEST-E-02, HARVEST-E-03, HARVEST-E-04, HARVEST-E-05, HARVEST-E-06, HARVEST-E-07] under participantContextId='HARVEST-E'[0m
+[0;32mINFO 2026-08-27T16:39:35.536634119 89 service extensions started[0m
+[0;32mINFO 2026-08-27T16:39:35.537208248 Runtime 9869e3a9-6d8e-4b1d-97ee-b24da9c32b09 ready[0m
