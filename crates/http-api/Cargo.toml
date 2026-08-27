@@ -13,6 +13,8 @@ path = "src/main.rs"
 [dependencies]
 catalog-core = { path = "../catalog-core" }
 rdf-store = { path = "../rdf-store" }
+dcp-core = { path = "../dcp-core" }
+crawler = { path = "../crawler" }
 axum = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

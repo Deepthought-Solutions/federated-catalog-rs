@@ -4,6 +4,8 @@ members = [
     "crates/catalog-core",
     "crates/rdf-store",
     "crates/http-api",
+    "crates/dcp-core",
+    "crates/crawler",
     # Vendored as git submodules (see vendor/README.md) - contreforts-kg is
     # the real Oxigraph-backed store this project's rdf-store crate builds
     # on; contreforts-core and contreforts-config are its own hard
@@ -36,7 +38,7 @@ async-trait = "0.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time"] }
 axum = "0.8"
 tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
@@ -62,6 +64,10 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 p256 = { version = "0.13", features = ["ecdsa", "pem"] }
 rand = "0.8"
 base64 = "0.22"
+# Parses crates/crawler's local-config participant registry TOML file
+# (ParticipantsConfig). Not used anywhere else in this workspace's own
+# crates today.
+toml = "0.8"
 # default-features = false is load-bearing: contreforts-config's own
 # manifest does `oxigraph = { workspace = true }` unmodified (it has no
 # feature-switch of its own, unlike contreforts-kg after

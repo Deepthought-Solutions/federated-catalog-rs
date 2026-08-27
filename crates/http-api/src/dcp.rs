@@ -9,15 +9,12 @@
 //! `eclipse-edc/IdentityHub` + Issuer Service this was built and tested
 //! against).
 //!
-//! This module hand-rolls JWS (ES256) signing/verification and does
-//! its own `did:web` resolution over plain HTTP requests, rather than
-//! pulling in a JSON-LD or full JWT-framework crate: the two operations
-//! actually needed are "sign this JSON with my key" and "verify this
-//! compact JWS against a JWK's raw x/y", and every message shape here
-//! (self-issued tokens, `PresentationQueryMessage`, the
-//! `PresentationResponseMessage`) is a small, fixed, already-known
-//! structure - there's no general JSON-LD processing or arbitrary JWT
-//! claim-set handling to justify a heavier dependency.
+//! The JWS/`did:web` primitives this module builds on live in the
+//! `dcp-core` crate, shared with a future credential-*holder* role (a
+//! crawler presenting its own credential to a remote participant) - see
+//! that crate's doc comment. This module keeps only what's specific to
+//! the *verifier* side: `DcpConfig`, the proof-of-original-possession
+//! re-packaging step, and `verify_dcp_bearer_token`'s end-to-end flow.
 //!
 //! ## The flow this implements
 //!
@@ -55,41 +52,25 @@
 //! the JWT-VC (`VC1_0_JWT`) shape this was built and tested against.
 
 use std::collections::HashSet;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::ops::Deref;
 
-use base64::Engine;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use p256::ecdsa::signature::{Signer, Verifier};
-use p256::ecdsa::{Signature, SigningKey, VerifyingKey};
-use p256::elliptic_curve::sec1::FromEncodedPoint;
-use serde::{Deserialize, Serialize};
+use dcp_core::{
+    DcpKeyPair, PRESENTATION_QUERY_CONTEXT, PresentationQueryMessage, PresentationResponseMessage,
+    decode_jws_unverified, find_verifying_key, now_secs, resolve_did, service_endpoint_url, sign_jws,
+    verify_jws_signature,
+};
 use serde_json::{Value, json};
 use uuid::Uuid;
 
-const PRESENTATION_QUERY_CONTEXT: &str = "https://w3id.org/dspace-dcp/v1.0/dcp.jsonld";
-const EXPECTED_CREDENTIAL_TYPE: &str = "FederatedCatalogAccessCredential";
-
-/// Config for `DspAuthMode::Dcp`. Keeps only plain, `Debug`/`Clone`-able
-/// data (the signing key as raw scalar bytes, not a `p256` key object)
-/// so it composes trivially with `DspAuthConfig`'s existing derives;
-/// `signing_key()`/`verifying_key()` reconstruct the actual key types on
-/// demand, which is cheap.
+/// Config for `DspAuthMode::Dcp`. Wraps a role-agnostic `DcpKeyPair`
+/// (this connector's own signing identity, shared shape with
+/// `dcp-core`'s holder-side use) plus the two fields that are actually
+/// verifier-specific. `Deref`s to the inner `DcpKeyPair` so existing call
+/// sites (`config.own_did`, `config.signing_key()`) keep working
+/// unchanged.
 #[derive(Debug, Clone)]
 pub struct DcpConfig {
-    /// This connector's own `did:web` identifier, e.g.
-    /// `did:web:localhost%3A18080:dsp`. Advertised as the `aud` incoming
-    /// self-issued tokens must target, and as the `iss`/`sub` of the
-    /// re-packaged token this connector sends onward.
-    pub own_did: String,
-    /// Full `<own_did>#<fragment>` form used as the JWS `kid` header on
-    /// tokens this connector signs, and as the matching
-    /// `verificationMethod.id` in its own hosted DID document.
-    pub own_key_id: String,
-    pub signing_key_bytes: [u8; 32],
-    /// Uncompressed public key point, as (x, y) big-endian byte arrays -
-    /// kept alongside the private scalar so `own_did_document()` doesn't
-    /// need to re-derive it on every request.
-    pub public_key_xy: ([u8; 32], [u8; 32]),
+    pub key_pair: DcpKeyPair,
     /// Whether to resolve `did:web` DIDs over plain HTTP instead of
     /// HTTPS. `did:web` resolution defaults to HTTPS per spec; this
     /// exists only for `compliance/dcp-test-env`'s local, unencrypted
@@ -102,79 +83,31 @@ pub struct DcpConfig {
     pub required_scope: String,
 }
 
+impl Deref for DcpConfig {
+    type Target = DcpKeyPair;
+
+    fn deref(&self) -> &DcpKeyPair {
+        &self.key_pair
+    }
+}
+
 impl DcpConfig {
     pub fn generate(own_did: String, insecure_http: bool, required_scope: String) -> Self {
-        let signing_key = SigningKey::random(&mut rand::rngs::OsRng);
-        let verifying_key = VerifyingKey::from(&signing_key);
-        let point = verifying_key.to_encoded_point(false);
-        let x: [u8; 32] = point.x().expect("uncompressed point has x").as_slice().try_into().expect("32 bytes");
-        let y: [u8; 32] = point.y().expect("uncompressed point has y").as_slice().try_into().expect("32 bytes");
         Self {
-            own_key_id: format!("{own_did}#dsp-key"),
-            own_did,
-            signing_key_bytes: signing_key.to_bytes().into(),
-            public_key_xy: (x, y),
+            key_pair: DcpKeyPair::generate(own_did),
             insecure_http,
             required_scope,
         }
     }
 
-    fn signing_key(&self) -> SigningKey {
-        SigningKey::from_bytes((&self.signing_key_bytes).into()).expect("stored key bytes are always valid")
-    }
-
     /// This connector's own DID document, served at `GET /dsp/did.json`
     /// so holders' Presentation APIs (via `SelfIssuedTokenVerifier`) can
     /// resolve the key that signs the re-packaged token this connector
-    /// sends them.
+    /// sends them. A verifier has no Presentation API of its own to
+    /// advertise, so it publishes an empty `service` array.
     pub fn own_did_document(&self) -> Value {
-        json!({
-            "@context": ["https://www.w3.org/ns/did/v1"],
-            "id": self.own_did,
-            "verificationMethod": [{
-                "id": self.own_key_id,
-                "type": "JsonWebKey2020",
-                "controller": self.own_did,
-                "publicKeyJwk": {
-                    "kty": "EC",
-                    "crv": "P-256",
-                    "x": URL_SAFE_NO_PAD.encode(self.public_key_xy.0),
-                    "y": URL_SAFE_NO_PAD.encode(self.public_key_xy.1),
-                }
-            }],
-            "service": [],
-        })
+        self.key_pair.did_document(&[])
     }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DidDocument {
-    #[serde(default)]
-    verification_method: Vec<VerificationMethod>,
-    #[serde(default)]
-    service: Vec<DidService>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct VerificationMethod {
-    id: String,
-    public_key_jwk: Option<Jwk>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Jwk {
-    x: String,
-    y: String,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DidService {
-    #[serde(rename = "type")]
-    ty: String,
-    service_endpoint: String,
 }
 
 /// The caller identity and dataset entitlements a successful DCP
@@ -184,146 +117,6 @@ struct DidService {
 pub struct VerifiedCaller {
     pub holder_did: String,
     pub catalog_access: HashSet<String>,
-}
-
-fn now_secs() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).expect("system clock before epoch").as_secs()
-}
-
-fn b64_decode(segment: &str) -> Result<Vec<u8>, String> {
-    URL_SAFE_NO_PAD.decode(segment).map_err(|e| format!("invalid base64url: {e}"))
-}
-
-/// Splits a compact JWS into (signing_input, header, payload) without
-/// verifying anything - used to peek at `iss`/`kid` before we know which
-/// key to verify against.
-fn decode_jws_unverified(token: &str) -> Result<(String, Value, Value), String> {
-    let mut parts = token.split('.');
-    let header_b64 = parts.next().ok_or("missing JWS header")?;
-    let payload_b64 = parts.next().ok_or("missing JWS payload")?;
-    let _sig_b64 = parts.next().ok_or("missing JWS signature")?;
-    if parts.next().is_some() {
-        return Err("JWS has more than 3 segments".to_string());
-    }
-    let signing_input = format!("{header_b64}.{payload_b64}");
-    let header: Value = serde_json::from_slice(&b64_decode(header_b64)?).map_err(|e| e.to_string())?;
-    let payload: Value = serde_json::from_slice(&b64_decode(payload_b64)?).map_err(|e| e.to_string())?;
-    Ok((signing_input, header, payload))
-}
-
-fn verify_jws_signature(token: &str, verifying_key: &VerifyingKey) -> Result<(), String> {
-    let mut parts = token.split('.');
-    let header_b64 = parts.next().ok_or("missing JWS header")?;
-    let payload_b64 = parts.next().ok_or("missing JWS payload")?;
-    let sig_b64 = parts.next().ok_or("missing JWS signature")?;
-    let signing_input = format!("{header_b64}.{payload_b64}");
-    let sig_bytes = b64_decode(sig_b64)?;
-    let signature = Signature::from_slice(&sig_bytes).map_err(|e| format!("malformed signature: {e}"))?;
-    verifying_key
-        .verify(signing_input.as_bytes(), &signature)
-        .map_err(|e| format!("signature verification failed: {e}"))
-}
-
-fn sign_jws(payload: &Value, signing_key: &SigningKey, kid: &str) -> String {
-    let header = json!({"kid": kid, "alg": "ES256"});
-    let header_b64 = URL_SAFE_NO_PAD.encode(header.to_string());
-    let payload_b64 = URL_SAFE_NO_PAD.encode(payload.to_string());
-    let signing_input = format!("{header_b64}.{payload_b64}");
-    let signature: Signature = signing_key.sign(signing_input.as_bytes());
-    let sig_b64 = URL_SAFE_NO_PAD.encode(signature.to_bytes());
-    format!("{signing_input}.{sig_b64}")
-}
-
-/// did:web resolution per the (simplified) spec: `did:web:<host>[:<path
-/// segments>]` -> `https://<host>/<path segments joined by "/">/did.json`,
-/// or `https://<host>/.well-known/did.json` with no path segments.
-fn did_web_to_url(did: &str, insecure_http: bool) -> Result<String, String> {
-    let rest = did.strip_prefix("did:web:").ok_or("not a did:web DID")?;
-    let mut segments = rest.split(':');
-    let host = segments.next().ok_or("did:web has no host segment")?;
-    let host = urlencoding_decode(host);
-    let path_segments: Vec<String> = segments.map(urlencoding_decode).collect();
-    let scheme = if insecure_http { "http" } else { "https" };
-    if path_segments.is_empty() {
-        Ok(format!("{scheme}://{host}/.well-known/did.json"))
-    } else {
-        Ok(format!("{scheme}://{host}/{}", path_segments.join("/")))
-    }
-}
-
-fn urlencoding_decode(segment: &str) -> String {
-    // did:web only ever percent-encodes ":" (as "%3A") in practice (to
-    // embed a port number in the host segment) - a full percent-decoder
-    // would be more correct but is unneeded machinery for this project's
-    // one actual use case.
-    segment.replace("%3A", ":").replace("%3a", ":")
-}
-
-async fn resolve_did(client: &reqwest::Client, did: &str, insecure_http: bool) -> Result<DidDocument, String> {
-    let url = did_web_to_url(did, insecure_http)?;
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| format!("failed to resolve DID {did} at {url}: {e}"))?;
-    if !response.status().is_success() {
-        return Err(format!("DID resolution for {did} returned HTTP {}", response.status()));
-    }
-    response
-        .json::<DidDocument>()
-        .await
-        .map_err(|e| format!("DID document for {did} was not valid: {e}"))
-}
-
-fn find_verifying_key(doc: &DidDocument, kid: &str) -> Result<VerifyingKey, String> {
-    let method = doc
-        .verification_method
-        .iter()
-        .find(|m| m.id == kid)
-        .ok_or_else(|| format!("no verification method '{kid}' in DID document"))?;
-    let jwk = method
-        .public_key_jwk
-        .as_ref()
-        .ok_or_else(|| format!("verification method '{kid}' has no publicKeyJwk"))?;
-    jwk_to_verifying_key(jwk)
-}
-
-fn jwk_to_verifying_key(jwk: &Jwk) -> Result<VerifyingKey, String> {
-    let x = b64_decode(&jwk.x)?;
-    let y = b64_decode(&jwk.y)?;
-    if x.len() != 32 || y.len() != 32 {
-        return Err("EC JWK x/y must be 32 bytes for P-256".to_string());
-    }
-    let point = p256::EncodedPoint::from_affine_coordinates(
-        p256::FieldBytes::from_slice(&x),
-        p256::FieldBytes::from_slice(&y),
-        false,
-    );
-    let public_key = p256::PublicKey::from_encoded_point(&point);
-    let public_key = Option::<p256::PublicKey>::from(public_key).ok_or("invalid EC point in JWK")?;
-    Ok(VerifyingKey::from(public_key))
-}
-
-fn credential_service_url(doc: &DidDocument) -> Result<String, String> {
-    doc.service
-        .iter()
-        .find(|s| s.ty == "CredentialService")
-        .map(|s| s.service_endpoint.clone())
-        .ok_or_else(|| "DID document has no CredentialService entry".to_string())
-}
-
-#[derive(Debug, Serialize)]
-struct PresentationQueryMessage {
-    #[serde(rename = "@context")]
-    context: &'static str,
-    #[serde(rename = "@type")]
-    ld_type: &'static str,
-    scope: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct PresentationResponseMessage {
-    presentation: Vec<String>,
 }
 
 /// Verifies an incoming DCP self-issued bearer token per the flow
@@ -370,7 +163,7 @@ pub async fn verify_dcp_bearer_token(token: &str, config: &DcpConfig, http: &req
     });
     let repackaged_token = sign_jws(&repackaged_payload, &config.signing_key(), &config.own_key_id);
 
-    let credential_service = credential_service_url(&holder_doc)?;
+    let credential_service = service_endpoint_url(&holder_doc, "CredentialService")?;
     let query_url = format!("{credential_service}/presentations/query");
     let query_body = PresentationQueryMessage {
         context: PRESENTATION_QUERY_CONTEXT,
@@ -430,7 +223,7 @@ pub async fn verify_dcp_bearer_token(token: &str, config: &DcpConfig, http: &req
 
         let vc_body = vc_payload.get("vc").cloned().unwrap_or(Value::Null);
         let types = vc_body.get("type").and_then(Value::as_array).cloned().unwrap_or_default();
-        let has_expected_type = types.iter().any(|t| t.as_str() == Some(EXPECTED_CREDENTIAL_TYPE));
+        let has_expected_type = types.iter().any(|t| t.as_str() == Some(dcp_core::EXPECTED_CREDENTIAL_TYPE));
         if !has_expected_type {
             continue;
         }

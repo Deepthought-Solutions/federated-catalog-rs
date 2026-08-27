@@ -1,0 +1,20 @@
+[package]
+name = "crawler"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Scheduled catalog crawler: polls a local-config participant registry's DSP catalog endpoints (with optional DCP holder support) and upserts results into rdf-store's CatalogCache."
+
+[dependencies]
+catalog-core = { path = "../catalog-core" }
+rdf-store = { path = "../rdf-store" }
+dcp-core = { path = "../dcp-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }

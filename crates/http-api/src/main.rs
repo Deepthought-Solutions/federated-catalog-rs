@@ -1,11 +1,39 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use crawler::ParticipantsConfig;
+use dcp_core::HolderIdentity;
 use http_api::{AppState, DcpConfig, DspAuthConfig, DspAuthMode, build_router, seed_sample_catalog};
+use rdf_store::CatalogCache;
 use rdf_store::memory::InMemoryCatalogCache;
 
 const DEFAULT_ADDR: &str = "127.0.0.1:8080";
 const DEFAULT_DCP_SCOPE: &str = "org.eclipse.dspace.dcp.vc.type:FederatedCatalogAccessCredential:read";
+
+/// Reads `CRAWLER_CONFIG_PATH` (optional). When set, loads and validates
+/// the TOML file at that path and builds this connector's own DCP holder
+/// identity from its `[holder]` section (if any). When unset, returns
+/// `None` and the caller must fall back to today's placeholder
+/// (`seed_sample_catalog`) - see `main`'s doc comment on why that
+/// fallback is a strict backward-compatibility requirement, not a default
+/// worth changing here.
+fn load_crawler_config() -> Option<ParticipantsConfig> {
+    let path = std::env::var("CRAWLER_CONFIG_PATH").ok()?;
+    let config = ParticipantsConfig::load(&path)
+        .unwrap_or_else(|err| panic!("failed to load CRAWLER_CONFIG_PATH={path:?}: {err}"));
+    Some(config)
+}
+
+fn build_holder(config: &ParticipantsConfig) -> Option<Arc<HolderIdentity>> {
+    config.holder.as_ref().map(|holder_config| {
+        Arc::new(HolderIdentity::new(
+            holder_config.own_did_host.clone(),
+            holder_config.insecure_http,
+            holder_config.credential_jws.clone(),
+            holder_config.required_scope.clone(),
+        ))
+    })
+}
 
 /// Reads `DSP_AUTH_MODE` (`"none"` (default) | `"bearer"` | `"dcp"`, case
 /// insensitive):
@@ -90,14 +118,38 @@ async fn main() {
     // per the rdf-store module docs) will be wired in here once the
     // graph-naming scheme is decided, behind the same `CatalogCache`
     // trait.
-    let cache = Arc::new(InMemoryCatalogCache::new());
-    // No crawler exists yet, so seed one sample catalog to serve - this
-    // stands in for a real crawl result until `CatalogCrawlerManager`'s
-    // Rust analogue lands.
-    seed_sample_catalog(&*cache)
-        .await
-        .expect("seeding sample catalog failed");
-    let state = AppState::new(cache).with_dsp_auth(dsp_auth);
+    let cache: Arc<dyn CatalogCache> = Arc::new(InMemoryCatalogCache::new());
+    let http_client = reqwest::Client::new();
+
+    // CRAWLER_CONFIG_PATH unset: byte-identical to this connector's
+    // original behavior - seed one placeholder sample catalog, start no
+    // crawler. CRAWLER_CONFIG_PATH set: this connector now serves real
+    // crawled data instead, via the scheduled crawler below.
+    let holder = match load_crawler_config() {
+        Some(config) => {
+            let holder = build_holder(&config);
+            tracing::info!(
+                participants = config.participants.len(),
+                interval_secs = config.interval_secs,
+                holder_configured = holder.is_some(),
+                "starting scheduled catalog crawler (CRAWLER_CONFIG_PATH set)"
+            );
+            crawler::spawn_scheduler(cache.clone(), config, http_client.clone(), holder.clone());
+            holder
+        }
+        None => {
+            // No crawler configured, so seed one sample catalog to serve
+            // - this stands in for a real crawl result until
+            // CRAWLER_CONFIG_PATH is set.
+            seed_sample_catalog(&*cache)
+                .await
+                .expect("seeding sample catalog failed");
+            None
+        }
+    };
+
+    let mut state = AppState::new(cache).with_dsp_auth(dsp_auth).with_holder(holder);
+    state.http = http_client;
     let app = build_router(state);
 
     let listener = tokio::net::TcpListener::bind(&addr)

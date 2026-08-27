@@ -1,0 +1,16 @@
+[package]
+name = "dcp-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Role-agnostic Decentralized Claims Protocol (DCP) primitives shared by a verifier (relying party) and a holder (credential presenter): compact-JWS sign/verify, did:web resolution, and the PresentationQueryMessage/PresentationResponseMessage wire shapes."
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+p256 = { workspace = true }
+base64 = { workspace = true }
+rand = { workspace = true }
+reqwest = { workspace = true }
+uuid = { workspace = true }
