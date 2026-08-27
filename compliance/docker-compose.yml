@@ -1,0 +1,11 @@
+services:
+  dsp-tck:
+    image: eclipsedataspacetck/dsp-tck-runtime:latest
+    container_name: federated-catalog-rs-dsp-tck
+    # The CUT (this project's http-api) runs on the host, not in this
+    # compose file - see README.md. host-gateway lets the container reach
+    # it via host.docker.internal, the pattern the TCK's own docs use.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./tck.properties:/etc/tck/config.properties:ro

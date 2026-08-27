@@ -94,6 +94,16 @@ See [`vendor/README.md`](vendor/README.md) for what's vendored, why, and
 a known metadata caveat (inherited `license`/`edition` on those crates
 doesn't match their own upstream `Cargo.toml`).
 
+## Compliance
+
+`http-api` doesn't speak the actual Dataspace Protocol wire format yet -
+just a Management-API-style stub. [`compliance/`](compliance/) has a
+minimal Docker Compose environment running the official
+[`dsp-tck`](https://github.com/eclipse-dataspacetck/dsp-tck) against it.
+First baseline run (2026-08-27): 0/65, as expected - see
+[`compliance/README.md`](compliance/README.md) for the exact gap list
+(the DSP endpoints that don't exist yet) and how to re-run it.
+
 ## Layout
 
 ```
@@ -105,6 +115,8 @@ vendor/
   contreforts-kg/      Oxigraph wrapper (GraphStore, QueryEngine) - rdf-store's real backend
   contreforts-core/    contreforts-kg's own dependency (shared error/connector types)
   contreforts-config/  contreforts-kg's own dependency (a second, separate Oxigraph store)
+compliance/
+  docker-compose.yml   runs the official dsp-tck against http-api (see compliance/README.md)
 ```
 
 ## Building and testing

@@ -1,0 +1,692 @@
+[1m
+[2026-08-27T04:05:10.405938718] [1mRunning DSP TCK v2025.1[0m
+[0m
+
+[2026-08-27T04:05:10.993430362] Started: TP:03-01: Verify transfer request, consumer completed
+[2026-08-27T04:05:11.007663311] Sending transfer request
+[2026-08-27T04:05:11.23933433] FAILED: TP:03-01
+
+
+[2026-08-27T04:05:11.239912138] Started: TP:03-02: Verify transfer request, consumer suspended
+[2026-08-27T04:05:11.241207292] Sending transfer request
+[2026-08-27T04:05:11.251975647] FAILED: TP:03-02
+
+
+[2026-08-27T04:05:11.25251531] Started: TP:03-03: Verify transfer request, provider started, consumer suspended, consumer completed
+[2026-08-27T04:05:11.254413804] Sending transfer request
+[2026-08-27T04:05:11.262422015] FAILED: TP:03-03
+
+
+[2026-08-27T04:05:11.262831407] Started: TP:03-04: Verify transfer request, provider started, consumer terminated, consumer started
+[2026-08-27T04:05:11.264189769] Sending transfer request
+[2026-08-27T04:05:11.271688216] FAILED: TP:03-04
+
+
+[2026-08-27T04:05:11.27211405] Started: TP:03-05: Verify transfer request, provider started, consumer terminated, consumer suspended
+[2026-08-27T04:05:11.273530668] Sending transfer request
+[2026-08-27T04:05:11.28091185] FAILED: TP:03-05
+
+
+[2026-08-27T04:05:11.281283249] Started: TP:03-06: Verify transfer request, provider started, consumer terminated, consumer completed
+[2026-08-27T04:05:11.282254065] Sending transfer request
+[2026-08-27T04:05:11.289221429] FAILED: TP:03-06
+
+
+[2026-08-27T04:05:11.292709025] Started: TP_C:02-01: Verify transfer request, provider started, consumer terminated
+[2026-08-27T04:05:11.300842247] FAILED: TP_C:02-01
+
+
+[2026-08-27T04:05:11.301309067] Started: TP_C:02-02: Verify transfer request, provider started, consumer completed
+[2026-08-27T04:05:11.305913096] FAILED: TP_C:02-02
+
+
+[2026-08-27T04:05:11.306702324] Started: TP_C:02-03: Verify transfer request, provider started, consumer suspended, consumer terminated
+[2026-08-27T04:05:11.312135341] FAILED: TP_C:02-03
+
+
+[2026-08-27T04:05:11.314657313] Started: TP_C:02-05: Verify transfer request, consumer terminated
+[2026-08-27T04:05:11.318032408] FAILED: TP_C:02-05
+
+
+[2026-08-27T04:05:11.319018087] Started: CN_C:01-01: Verify contract request, offer received, consumer accepted, provider agreed, consumer verified, provider finalized
+[2026-08-27T04:05:11.325009294] FAILED: CN_C:01-01
+
+
+[2026-08-27T04:05:11.325369139] Started: CN_C:01-02: Verify contract request, offer received, consumer counter-offer, provider terminated
+[2026-08-27T04:05:11.327884378] FAILED: CN_C:01-02
+
+
+[2026-08-27T04:05:11.32811915] Started: CN_C:01-03: Verify contract request, offer received, consumer terminated
+[2026-08-27T04:05:11.330099168] FAILED: CN_C:01-03
+
+
+[2026-08-27T04:05:11.33032948] Started: CN_C:01-04: Verify contract request, provider agreement, consumer verified, provider finalized
+[2026-08-27T04:05:11.332228729] FAILED: CN_C:01-04
+
+
+[2026-08-27T04:05:11.333059178] Started: CN:02-01: Verify contract request, provider terminated
+[2026-08-27T04:05:11.336475042] Sending contract request
+[2026-08-27T04:05:11.348956847] FAILED: CN:02-01
+
+
+[2026-08-27T04:05:11.349359372] Started: CN:02-02: Verify contract request, consumer terminated
+[2026-08-27T04:05:11.350140191] Sending contract request
+[2026-08-27T04:05:11.355717181] FAILED: CN:02-02
+
+
+[2026-08-27T04:05:11.356045087] Started: CN:02-03: Verify contract request, provider agreement, consumer terminated
+[2026-08-27T04:05:11.357037537] Sending contract request
+[2026-08-27T04:05:11.365057246] FAILED: CN:02-03
+
+
+[2026-08-27T04:05:11.365452945] Started: CN:02-04: Verify contract request, offer received, consumer terminated
+[2026-08-27T04:05:11.366593834] Sending contract request
+[2026-08-27T04:05:11.372511713] FAILED: CN:02-04
+
+
+[2026-08-27T04:05:11.372919614] Started: CN:02-05: Verify contract request, offer received, provider terminated
+[2026-08-27T04:05:11.373803857] Sending contract request
+[2026-08-27T04:05:11.379538692] FAILED: CN:02-05
+
+
+[2026-08-27T04:05:11.379868652] Started: CN:02-06: Verify contract request, offer received, consumer accepted, provider terminated
+[2026-08-27T04:05:11.380772192] Sending contract request
+[2026-08-27T04:05:11.386181941] FAILED: CN:02-06
+
+
+[2026-08-27T04:05:11.386599616] Started: CN:02-07: Verify contract request, provider agreement, consumer verified, provider terminated
+[2026-08-27T04:05:11.387589084] Sending contract request
+[2026-08-27T04:05:11.394443511] FAILED: CN:02-07
+
+
+[2026-08-27T04:05:11.396687728] Started: CN:01-01: Verify contract request, offer received, consumer terminated
+[2026-08-27T04:05:11.398316498] Sending contract request
+[2026-08-27T04:05:11.408077417] FAILED: CN:01-01
+
+
+[2026-08-27T04:05:11.408731827] Started: CN:01-02: Verify contract request, offer received, consumer counter-offer, provider terminated
+[2026-08-27T04:05:11.410630302] Sending contract request
+[2026-08-27T04:05:11.417153399] FAILED: CN:01-02
+
+
+[2026-08-27T04:05:11.417819968] Started: CN:01-03: Verify contract request, offer received, consumer accepted, provider agreement, consumer verified, provider finalized
+[2026-08-27T04:05:11.42029701] Sending contract request
+[2026-08-27T04:05:11.429829894] FAILED: CN:01-03
+
+
+[2026-08-27T04:05:11.430573733] Started: CN:01-04: Verify contract request, provider agreement, consumer verified, provider finalized
+[2026-08-27T04:05:11.432556662] Sending contract request
+[2026-08-27T04:05:11.441971619] FAILED: CN:01-04
+
+
+[2026-08-27T04:05:11.443797928] Started: TP_C:01-01: Verify transfer request, provider started, provider terminated
+[2026-08-27T04:05:11.449116542] FAILED: TP_C:01-01
+
+
+[2026-08-27T04:05:11.450032841] Started: TP_C:01-02: Verify transfer request, provider started, provider completed
+[2026-08-27T04:05:11.455354217] FAILED: TP_C:01-02
+
+
+[2026-08-27T04:05:11.456073798] Started: TP_C:01-03: Verify transfer request, provider started, provider suspended, provider terminated
+[2026-08-27T04:05:11.460973923] FAILED: TP_C:01-03
+
+
+[2026-08-27T04:05:11.461594952] Started: TP_C:01-04: Verify transfer request, provider started, provider suspended, provider started, provider completed
+[2026-08-27T04:05:11.466868623] FAILED: TP_C:01-04
+
+
+[2026-08-27T04:05:11.467569791] Started: TP_C:01-05: Verify transfer request, provider terminated
+[2026-08-27T04:05:11.471633301] FAILED: TP_C:01-05
+
+
+[2026-08-27T04:05:11.472454335] Started: CN_C:03-01: Verify contract request, invalid provider finalized
+[2026-08-27T04:05:11.475320352] FAILED: CN_C:03-01
+
+
+[2026-08-27T04:05:11.475620059] Started: CN_C:03-02: Verify contract request, offer received, invalid provider agreed
+[2026-08-27T04:05:11.478620448] FAILED: CN_C:03-02
+
+
+[2026-08-27T04:05:11.478957411] Started: CN_C:03-03: Verify contract request, offer received, invalid provider finalized
+[2026-08-27T04:05:11.482418164] FAILED: CN_C:03-03
+
+
+[2026-08-27T04:05:11.483008991] Started: CN_C:03-04: Verify contract request, offer received, consumer accepted, invalid provider finalized
+[2026-08-27T04:05:11.487794999] FAILED: CN_C:03-04
+
+
+[2026-08-27T04:05:11.488380183] Started: CN_C:03-05: Verify contract request, offer received, consumer accepted, invalid provider offer
+[2026-08-27T04:05:11.492003493] FAILED: CN_C:03-05
+
+
+[2026-08-27T04:05:11.49233667] Started: CN_C:03-06: Verify contract request, offer received, consumer accepted, provider agreed, invalid provider finalized
+[2026-08-27T04:05:11.495586479] FAILED: CN_C:03-06
+
+
+[2026-08-27T04:05:11.496535539] Started: TP:02-01: Verify transfer request, provider started, consumer terminated
+[2026-08-27T04:05:11.497369691] Sending transfer request
+[2026-08-27T04:05:11.50303697] FAILED: TP:02-01
+
+
+[2026-08-27T04:05:11.503613251] Started: TP:02-02: Verify transfer request, provider started, consumer completed
+[2026-08-27T04:05:11.505009912] Sending transfer request
+[2026-08-27T04:05:11.511431511] FAILED: TP:02-02
+
+
+[2026-08-27T04:05:11.512029887] Started: TP:02-03: Verify transfer request, provider started, consumer suspended, consumer terminated
+[2026-08-27T04:05:11.513664925] Sending transfer request
+[2026-08-27T04:05:11.521613043] FAILED: TP:02-03
+
+
+[2026-08-27T04:05:11.522713958] Started: TP:02-05: Verify transfer request, consumer terminated
+[2026-08-27T04:05:11.523531364] Sending transfer request
+[2026-08-27T04:05:11.529273151] FAILED: TP:02-05
+
+
+[2026-08-27T04:05:11.530117321] Started: TP:01-01: Verify transfer request, provider started, provider terminated
+[2026-08-27T04:05:11.531115511] Sending transfer request
+[2026-08-27T04:05:11.535886073] FAILED: TP:01-01
+
+
+[2026-08-27T04:05:11.536232167] Started: TP:01-02: Verify transfer request, provider started, provider completed
+[2026-08-27T04:05:11.537208549] Sending transfer request
+[2026-08-27T04:05:11.541898598] FAILED: TP:01-02
+
+
+[2026-08-27T04:05:11.542380088] Started: TP:01-03: Verify transfer request, provider started, provider suspended, provider terminated
+[2026-08-27T04:05:11.54412419] Sending transfer request
+[2026-08-27T04:05:11.558989718] FAILED: TP:01-03
+
+
+[2026-08-27T04:05:11.559958374] Started: TP:01-04: Verify transfer request, provider started, provider suspended, provider started, provider completed
+[2026-08-27T04:05:11.564940134] Sending transfer request
+[2026-08-27T04:05:11.574682524] FAILED: TP:01-04
+
+
+[2026-08-27T04:05:11.575055742] Started: TP:01-05: Verify transfer request, provider terminated
+[2026-08-27T04:05:11.576089227] Sending transfer request
+[2026-08-27T04:05:11.581810201] FAILED: TP:01-05
+
+
+[2026-08-27T04:05:11.583226352] Started: TP_C:03-01: Verify transfer request, provider completed
+[2026-08-27T04:05:11.587703076] FAILED: TP_C:03-01
+
+
+[2026-08-27T04:05:11.588197694] Started: TP_C:03-02: Verify transfer request, provider suspended
+[2026-08-27T04:05:11.594433256] FAILED: TP_C:03-02
+
+
+[2026-08-27T04:05:11.594938735] Started: TP_C:03-03: Verify transfer request, provider started, provider suspended, provider completed
+[2026-08-27T04:05:11.59955697] FAILED: TP_C:03-03
+
+
+[2026-08-27T04:05:11.600141106] Started: TP_C:03-04: Verify transfer request, provider started, provider terminated, provider started
+[2026-08-27T04:05:11.604609073] FAILED: TP_C:03-04
+
+
+[2026-08-27T04:05:11.60512431] Started: TP_C:03-05: Verify transfer request, provider started, provider terminated, provider suspended
+[2026-08-27T04:05:11.60944795] FAILED: TP_C:03-05
+
+
+[2026-08-27T04:05:11.610053127] Started: TP_C:03-06: Verify transfer request, provider started, provider terminated, provider completed
+[2026-08-27T04:05:11.614009206] FAILED: TP_C:03-06
+
+
+[2026-08-27T04:05:11.615458534] Started: CN_C:02-01: Verify contract request, provider terminated
+[2026-08-27T04:05:11.629694836] FAILED: CN_C:02-01
+
+
+[2026-08-27T04:05:11.630042108] Started: CN_C:02-02: Verify contract request, consumer terminated
+[2026-08-27T04:05:11.633405086] FAILED: CN_C:02-02
+
+
+[2026-08-27T04:05:11.633899422] Started: CN_C:02-03: Verify contract request, provider agreement, consumer terminated
+[2026-08-27T04:05:11.63826576] FAILED: CN_C:02-03
+
+
+[2026-08-27T04:05:11.63877192] Started: CN_C:02-04: Verify contract request, offer received, provider terminated
+[2026-08-27T04:05:11.643086645] FAILED: CN_C:02-04
+
+
+[2026-08-27T04:05:11.643560299] Started: CN_C:02-05: Verify contract request, offer received, consumer accepted, provider terminated
+[2026-08-27T04:05:11.647838094] FAILED: CN_C:02-05
+
+
+[2026-08-27T04:05:11.648322808] Started: CN_C:02-06: Verify contract request, provider agreement, consumer verified, provider terminated
+[2026-08-27T04:05:11.652524694] FAILED: CN_C:02-06
+
+
+[2026-08-27T04:05:11.653656636] Started: MET:01-01: Verify metadata request
+[2026-08-27T04:05:11.662277185] FAILED: MET:01-01
+
+
+[2026-08-27T04:05:11.663643523] Started: CN:03-01: Verify contract request, provider agreement, consumer verified, provider finalized, invalid consumer terminated
+[2026-08-27T04:05:11.665325585] Sending contract request
+[2026-08-27T04:05:11.674001949] FAILED: CN:03-01
+
+
+[2026-08-27T04:05:11.674422742] Started: CN:03-02: Verify contract request, offer received, invalid consumer verified
+[2026-08-27T04:05:11.675370185] Sending contract request
+[2026-08-27T04:05:11.68042396] FAILED: CN:03-02
+
+
+[2026-08-27T04:05:11.680747338] Started: CN:03-03: Verify contract request, offer received, consumer accepted, illegal consumer verified
+[2026-08-27T04:05:11.681635162] Sending contract request
+[2026-08-27T04:05:11.687326714] FAILED: CN:03-03
+
+
+[2026-08-27T04:05:11.687874145] Started: CN:03-04: Verify contract request, offer received, consumer counter-offer (x2), provider terminated
+[2026-08-27T04:05:11.689293377] Sending contract request
+[2026-08-27T04:05:11.695340812] FAILED: CN:03-04
+
+
+[2026-08-27T04:05:11.696525852] Started: CAT:01-01: Verify catalog request
+[2026-08-27T04:05:11.703590768] FAILED: CAT:01-01
+
+
+[2026-08-27T04:05:11.703957149] Started: CAT:01-02: Verify dataset request
+[2026-08-27T04:05:11.706880751] FAILED: CAT:01-02
+
+
+[2026-08-27T04:05:11.707210471] Started: CAT:01-03: Verify dataset request not found
+[2026-08-27T04:05:11.708916312] Received dataset request response
+[2026-08-27T04:05:11.710821582] FAILED: CAT:01-03
+
+[2026-08-27T04:05:11.71253106] Passed tests: 0
+[2026-08-27T04:05:11.712616828] Failed tests: 65
+[31m
+[2026-08-27T04:05:11.712666952] Failures:
+[2026-08-27T04:05:11.713195829] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider03Test.tp_03_01
+
+[2026-08-27T04:05:11.713326364]      [TP:03-01: Verify transfer request, consumer completed]
+[2026-08-27T04:05:11.713383713]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.713429098] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider03Test.tp_03_02
+
+[2026-08-27T04:05:11.71345469]      [TP:03-02: Verify transfer request, consumer suspended]
+[2026-08-27T04:05:11.713470849]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.713495329] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider03Test.tp_03_03
+
+[2026-08-27T04:05:11.713517167]      [TP:03-03: Verify transfer request, provider started, consumer suspended, consumer completed]
+[2026-08-27T04:05:11.713532809]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.713553272] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider03Test.tp_03_04
+
+[2026-08-27T04:05:11.713574447]      [TP:03-04: Verify transfer request, provider started, consumer terminated, consumer started]
+[2026-08-27T04:05:11.713588886]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.713611026] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider03Test.tp_03_05
+
+[2026-08-27T04:05:11.713634985]      [TP:03-05: Verify transfer request, provider started, consumer terminated, consumer suspended]
+[2026-08-27T04:05:11.713649613]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.713671251] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider03Test.tp_03_06
+
+[2026-08-27T04:05:11.713692269]      [TP:03-06: Verify transfer request, provider started, consumer terminated, consumer completed]
+[2026-08-27T04:05:11.713705323]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.713726306] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer02Test.tp_c_02_01
+
+[2026-08-27T04:05:11.71374673]      [TP_C:02-01: Verify transfer request, provider started, consumer terminated]
+[2026-08-27T04:05:11.713760457]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.713787126] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer02Test.tp_c_02_02
+
+[2026-08-27T04:05:11.713805973]      [TP_C:02-02: Verify transfer request, provider started, consumer completed]
+[2026-08-27T04:05:11.713821456]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.713842337] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer02Test.tp_c_02_03
+
+[2026-08-27T04:05:11.713861226]      [TP_C:02-03: Verify transfer request, provider started, consumer suspended, consumer terminated]
+[2026-08-27T04:05:11.713877747]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.713906296] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer02Test.tp_c_02_05
+
+[2026-08-27T04:05:11.713926088]      [TP_C:02-05: Verify transfer request, consumer terminated]
+[2026-08-27T04:05:11.71394183]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.713974675] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer01Test.cn_c_01_01
+
+[2026-08-27T04:05:11.713999583]      [CN_C:01-01: Verify contract request, offer received, consumer accepted, provider agreed, consumer verified, provider finalized]
+[2026-08-27T04:05:11.714013514]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.714036269] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer01Test.cn_c_01_02
+
+[2026-08-27T04:05:11.714062426]      [CN_C:01-02: Verify contract request, offer received, consumer counter-offer, provider terminated]
+[2026-08-27T04:05:11.714078602]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.714101172] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer01Test.cn_c_01_03
+
+[2026-08-27T04:05:11.714121568]      [CN_C:01-03: Verify contract request, offer received, consumer terminated]
+[2026-08-27T04:05:11.714137813]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.714160722] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer01Test.cn_c_01_04
+
+[2026-08-27T04:05:11.714180679]      [CN_C:01-04: Verify contract request, provider agreement, consumer verified, provider finalized]
+[2026-08-27T04:05:11.714203891]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.714233769] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider02Test.cn_02_01
+
+[2026-08-27T04:05:11.714266709]      [CN:02-01: Verify contract request, provider terminated]
+[2026-08-27T04:05:11.714289452]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.714319474] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider02Test.cn_02_02
+
+[2026-08-27T04:05:11.714338869]      [CN:02-02: Verify contract request, consumer terminated]
+[2026-08-27T04:05:11.714351513]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.71437223] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider02Test.cn_02_03
+
+[2026-08-27T04:05:11.714391623]      [CN:02-03: Verify contract request, provider agreement, consumer terminated]
+[2026-08-27T04:05:11.714413052]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.714435904] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider02Test.cn_02_04
+
+[2026-08-27T04:05:11.71445374]      [CN:02-04: Verify contract request, offer received, consumer terminated]
+[2026-08-27T04:05:11.714472589]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.714492668] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider02Test.cn_02_05
+
+[2026-08-27T04:05:11.7145119]      [CN:02-05: Verify contract request, offer received, provider terminated]
+[2026-08-27T04:05:11.714526134]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.714544963] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider02Test.cn_02_06
+
+[2026-08-27T04:05:11.714564264]      [CN:02-06: Verify contract request, offer received, consumer accepted, provider terminated]
+[2026-08-27T04:05:11.71457711]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.714597408] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider02Test.cn_02_07
+
+[2026-08-27T04:05:11.714618338]      [CN:02-07: Verify contract request, provider agreement, consumer verified, provider terminated]
+[2026-08-27T04:05:11.714631877]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.71465262] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider01Test.cn_01_01
+
+[2026-08-27T04:05:11.714688396]      [CN:01-01: Verify contract request, offer received, consumer terminated]
+[2026-08-27T04:05:11.714701798]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.714724358] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider01Test.cn_01_02
+
+[2026-08-27T04:05:11.714743237]      [CN:01-02: Verify contract request, offer received, consumer counter-offer, provider terminated]
+[2026-08-27T04:05:11.714756081]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.714776696] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider01Test.cn_01_03
+
+[2026-08-27T04:05:11.714795053]      [CN:01-03: Verify contract request, offer received, consumer accepted, provider agreement, consumer verified, provider finalized]
+[2026-08-27T04:05:11.714810005]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.714828851] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider01Test.cn_01_04
+
+[2026-08-27T04:05:11.714848122]      [CN:01-04: Verify contract request, provider agreement, consumer verified, provider finalized]
+[2026-08-27T04:05:11.714860227]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.714878419] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer01Test.tp_c_01_01
+
+[2026-08-27T04:05:11.714902884]      [TP_C:01-01: Verify transfer request, provider started, provider terminated]
+[2026-08-27T04:05:11.714917606]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.714941471] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer01Test.tp_c_01_02
+
+[2026-08-27T04:05:11.714960419]      [TP_C:01-02: Verify transfer request, provider started, provider completed]
+[2026-08-27T04:05:11.714972701]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.714991836] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer01Test.tp_c_01_03
+
+[2026-08-27T04:05:11.715009194]      [TP_C:01-03: Verify transfer request, provider started, provider suspended, provider terminated]
+[2026-08-27T04:05:11.715022366]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.715041738] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer01Test.tp_c_01_04
+
+[2026-08-27T04:05:11.715059099]      [TP_C:01-04: Verify transfer request, provider started, provider suspended, provider started, provider completed]
+[2026-08-27T04:05:11.715075239]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.715094515] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer01Test.tp_c_01_05
+
+[2026-08-27T04:05:11.715116962]      [TP_C:01-05: Verify transfer request, provider terminated]
+[2026-08-27T04:05:11.715134021]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.715193168] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer03Test.cn_c_03_01
+
+[2026-08-27T04:05:11.715233067]      [CN_C:03-01: Verify contract request, invalid provider finalized]
+[2026-08-27T04:05:11.715316488]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.715402666] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer03Test.cn_c_03_02
+
+[2026-08-27T04:05:11.715452985]      [CN_C:03-02: Verify contract request, offer received, invalid provider agreed]
+[2026-08-27T04:05:11.715483885]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.715534117] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer03Test.cn_c_03_03
+
+[2026-08-27T04:05:11.715576344]      [CN_C:03-03: Verify contract request, offer received, invalid provider finalized]
+[2026-08-27T04:05:11.715606912]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.715651565] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer03Test.cn_c_03_04
+
+[2026-08-27T04:05:11.71568487]      [CN_C:03-04: Verify contract request, offer received, consumer accepted, invalid provider finalized]
+[2026-08-27T04:05:11.715718763]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.715761997] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer03Test.cn_c_03_05
+
+[2026-08-27T04:05:11.715807362]      [CN_C:03-05: Verify contract request, offer received, consumer accepted, invalid provider offer]
+[2026-08-27T04:05:11.715839059]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.715882631] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer03Test.cn_c_03_06
+
+[2026-08-27T04:05:11.715928991]      [CN_C:03-06: Verify contract request, offer received, consumer accepted, provider agreed, invalid provider finalized]
+[2026-08-27T04:05:11.715954701]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.715991153] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider02Test.tp_02_01
+
+[2026-08-27T04:05:11.716024603]      [TP:02-01: Verify transfer request, provider started, consumer terminated]
+[2026-08-27T04:05:11.716049248]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.716163103] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider02Test.tp_02_02
+
+[2026-08-27T04:05:11.716217621]      [TP:02-02: Verify transfer request, provider started, consumer completed]
+[2026-08-27T04:05:11.716243086]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.716282328] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider02Test.tp_02_03
+
+[2026-08-27T04:05:11.71631166]      [TP:02-03: Verify transfer request, provider started, consumer suspended, consumer terminated]
+[2026-08-27T04:05:11.716337688]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.716369746] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider02Test.tp_02_05
+
+[2026-08-27T04:05:11.716398781]      [TP:02-05: Verify transfer request, consumer terminated]
+[2026-08-27T04:05:11.71642435]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.716473333] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider01Test.tp_01_01
+
+[2026-08-27T04:05:11.716508571]      [TP:01-01: Verify transfer request, provider started, provider terminated]
+[2026-08-27T04:05:11.716531496]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.716562347] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider01Test.tp_01_02
+
+[2026-08-27T04:05:11.716594202]      [TP:01-02: Verify transfer request, provider started, provider completed]
+[2026-08-27T04:05:11.716617046]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.716648745] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider01Test.tp_01_03
+
+[2026-08-27T04:05:11.716679334]      [TP:01-03: Verify transfer request, provider started, provider suspended, provider terminated]
+[2026-08-27T04:05:11.716704639]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.71673675] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider01Test.tp_01_04
+
+[2026-08-27T04:05:11.71676651]      [TP:01-04: Verify transfer request, provider started, provider suspended, provider started, provider completed]
+[2026-08-27T04:05:11.716792559]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.716826204] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessProvider01Test.tp_01_05
+
+[2026-08-27T04:05:11.716857421]      [TP:01-05: Verify transfer request, provider terminated]
+[2026-08-27T04:05:11.716883271]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/transfers/request
+
+[2026-08-27T04:05:11.716934549] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer03Test.tp_c_03_01
+
+[2026-08-27T04:05:11.716969956]      [TP_C:03-01: Verify transfer request, provider completed]
+[2026-08-27T04:05:11.716994349]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.717079564] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer03Test.tp_c_03_02
+
+[2026-08-27T04:05:11.717149631]      [TP_C:03-02: Verify transfer request, provider suspended]
+[2026-08-27T04:05:11.717175361]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.717214582] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer03Test.tp_c_03_03
+
+[2026-08-27T04:05:11.717235636]      [TP_C:03-03: Verify transfer request, provider started, provider suspended, provider completed]
+[2026-08-27T04:05:11.717247842]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.717270958] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer03Test.tp_c_03_04
+
+[2026-08-27T04:05:11.717287991]      [TP_C:03-04: Verify transfer request, provider started, provider terminated, provider started]
+[2026-08-27T04:05:11.717298999]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.717313412] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer03Test.tp_c_03_05
+
+[2026-08-27T04:05:11.717330253]      [TP_C:03-05: Verify transfer request, provider started, provider terminated, provider suspended]
+[2026-08-27T04:05:11.717342651]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.717356226] 
+   ■ org.eclipse.dataspacetck.dsp.verification.tp.TransferProcessConsumer03Test.tp_c_03_06
+
+[2026-08-27T04:05:11.717371478]      [TP_C:03-06: Verify transfer request, provider started, provider terminated, provider completed]
+[2026-08-27T04:05:11.717383957]      Unexpected 404 received for request: http://host.docker.internal:18080/transfers
+
+[2026-08-27T04:05:11.717397959] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer02Test.cn_c_02_01
+
+[2026-08-27T04:05:11.717420643]      [CN_C:02-01: Verify contract request, provider terminated]
+[2026-08-27T04:05:11.717434794]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.717453434] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer02Test.cn_c_02_02
+
+[2026-08-27T04:05:11.717473289]      [CN_C:02-02: Verify contract request, consumer terminated]
+[2026-08-27T04:05:11.717488402]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.717505415] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer02Test.cn_c_02_03
+
+[2026-08-27T04:05:11.717521188]      [CN_C:02-03: Verify contract request, provider agreement, consumer terminated]
+[2026-08-27T04:05:11.717531728]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.71754655] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer02Test.cn_c_02_04
+
+[2026-08-27T04:05:11.717562429]      [CN_C:02-04: Verify contract request, offer received, provider terminated]
+[2026-08-27T04:05:11.717572856]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.71758848] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer02Test.cn_c_02_05
+
+[2026-08-27T04:05:11.717604894]      [CN_C:02-05: Verify contract request, offer received, consumer accepted, provider terminated]
+[2026-08-27T04:05:11.717618163]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.717631085] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationConsumer02Test.cn_c_02_06
+
+[2026-08-27T04:05:11.717651846]      [CN_C:02-06: Verify contract request, provider agreement, consumer verified, provider terminated]
+[2026-08-27T04:05:11.717662843]      Unexpected 404 received for request: http://host.docker.internal:18080/negotiations
+
+[2026-08-27T04:05:11.717677869] 
+   ■ org.eclipse.dataspacetck.dsp.verification.metadata.Metadata01Test.cat_01_01
+
+[2026-08-27T04:05:11.717704905]      [MET:01-01: Verify metadata request]
+[2026-08-27T04:05:11.717722941]      Unexpected 404 received for request: http://host.docker.internal:18080/.well-known/dspace-version
+
+[2026-08-27T04:05:11.717748859] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider03Test.cn_03_01
+
+[2026-08-27T04:05:11.717785144]      [CN:03-01: Verify contract request, provider agreement, consumer verified, provider finalized, invalid consumer terminated]
+[2026-08-27T04:05:11.71779823]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.717817094] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider03Test.cn_03_02
+
+[2026-08-27T04:05:11.717834035]      [CN:03-02: Verify contract request, offer received, invalid consumer verified]
+[2026-08-27T04:05:11.717850571]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.717866301] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider03Test.cn_03_03
+
+[2026-08-27T04:05:11.717885309]      [CN:03-03: Verify contract request, offer received, consumer accepted, illegal consumer verified]
+[2026-08-27T04:05:11.717905432]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.717919549] 
+   ■ org.eclipse.dataspacetck.dsp.verification.cn.ContractNegotiationProvider03Test.cn_03_04
+
+[2026-08-27T04:05:11.71793745]      [CN:03-04: Verify contract request, offer received, consumer counter-offer (x2), provider terminated]
+[2026-08-27T04:05:11.717948169]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/negotiations/request
+
+[2026-08-27T04:05:11.717964746] 
+   ■ org.eclipse.dataspacetck.dsp.verification.catalog.Catalog01Test.cat_01_01
+
+[2026-08-27T04:05:11.71798148]      [CAT:01-01: Verify catalog request]
+[2026-08-27T04:05:11.717993839]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/catalog/request
+
+[2026-08-27T04:05:11.718011434] 
+   ■ org.eclipse.dataspacetck.dsp.verification.catalog.Catalog01Test.cat_01_02
+
+[2026-08-27T04:05:11.718030656]      [CAT:01-02: Verify dataset request]
+[2026-08-27T04:05:11.718041816]      Unexpected 404 received for request: http://host.docker.internal:18080/dsp/catalog/datasets/ab855153-0796-44d9-aee2-d7d2e1409d4e
+
+[2026-08-27T04:05:11.718056381] 
+   ■ org.eclipse.dataspacetck.dsp.verification.catalog.Catalog01Test.cat_01_03
+
+[2026-08-27T04:05:11.718074033]      [CAT:01-03: Verify dataset request not found]
+[2026-08-27T04:05:11.718085981]      Cannot deserialize json: No content to map due to end-of-input
+ at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); byte offset: #UNKNOWN]
+
+[0m
+[0m
+[2026-08-27T04:05:11.718141326] Test run complete
