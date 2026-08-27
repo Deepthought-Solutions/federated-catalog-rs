@@ -203,6 +203,7 @@ pub async fn verify_dcp_bearer_token(token: &str, config: &DcpConfig, http: &req
     }
 
     let mut catalog_access = HashSet::new();
+    let mut had_expired_credential = false;
     for vc_value in &vc_jws_list {
         let vc_jws = vc_value.as_str().ok_or("verifiableCredential entry was not a string")?;
         let (_, vc_header, vc_payload) = decode_jws_unverified(vc_jws)?;
@@ -218,7 +219,11 @@ pub async fn verify_dcp_bearer_token(token: &str, config: &DcpConfig, http: &req
 
         let vc_exp = vc_payload.get("exp").and_then(Value::as_u64).unwrap_or(0);
         if vc_exp <= now_secs() {
-            continue; // expired credential: skip, don't grant its access
+            // Expired credential: skip granting its access, but remember
+            // this happened - an all-expired presentation must not read
+            // as "authenticated, genuinely granted nothing" (see below).
+            had_expired_credential = true;
+            continue;
         }
 
         let vc_body = vc_payload.get("vc").cloned().unwrap_or(Value::Null);
@@ -239,6 +244,17 @@ pub async fn verify_dcp_bearer_token(token: &str, config: &DcpConfig, http: &req
                 }
             }
         }
+    }
+
+    // An empty result is normally a legitimate "authenticated, genuinely
+    // granted nothing" outcome (see `visible_datasets`'s doc comment in
+    // lib.rs) - but if it's empty *because* every credential presented was
+    // expired, that's an authentication failure, not a valid zero-access
+    // caller, and must not be cached as if it were (a caller with a
+    // temporarily expired credential would otherwise silently overwrite
+    // their own previously-good cached catalog with an empty one).
+    if catalog_access.is_empty() && had_expired_credential {
+        return Err("all presented credentials are expired".to_string());
     }
 
     Ok(VerifiedCaller { holder_did, catalog_access })

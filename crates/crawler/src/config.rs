@@ -79,7 +79,7 @@ pub struct ParticipantEntry {
 #[derive(Debug, Clone, Deserialize)]
 pub struct HolderConfig {
     /// This crawler's own `did:web` host\[:port\] -
-    /// `did:web:<own_did_host>:dsp-holder` is derived from it (see
+    /// `did:web:<own_did_host>:dsp:holder` is derived from it (see
     /// `dcp_core::HolderIdentity::new`).
     pub own_did_host: String,
     /// Resolve `did:web` DIDs over plain `http://` instead of `https://` -

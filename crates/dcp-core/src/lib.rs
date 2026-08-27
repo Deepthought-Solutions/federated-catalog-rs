@@ -98,7 +98,7 @@ pub fn did_web_to_url(did: &str, insecure_http: bool) -> Result<String, String> 
     if path_segments.is_empty() {
         Ok(format!("{scheme}://{host}/.well-known/did.json"))
     } else {
-        Ok(format!("{scheme}://{host}/{}", path_segments.join("/")))
+        Ok(format!("{scheme}://{host}/{}/did.json", path_segments.join("/")))
     }
 }
 
@@ -341,11 +341,14 @@ pub struct HolderIdentity {
 
 impl HolderIdentity {
     /// Builds a fresh holder identity: `own_did` is derived as
-    /// `did:web:<own_did_host, ':' percent-encoded>:dsp-holder`, and a new
+    /// `did:web:<own_did_host, ':' percent-encoded>:dsp:holder` - two
+    /// colon-separated segments, matching `did_web_to_url`'s
+    /// segments-joined-by-"/" resolution to `.../dsp/holder/did.json`,
+    /// the actual route `http_api::build_router` registers - and a new
     /// signing key is generated (see this type's doc comment for why that
     /// key is never persisted).
     pub fn new(own_did_host: String, insecure_http: bool, credential_jws: String, required_scope: String) -> Self {
-        let own_did = format!("did:web:{}:dsp-holder", own_did_host.replace(':', "%3A"));
+        let own_did = format!("did:web:{}:dsp:holder", own_did_host.replace(':', "%3A"));
         Self {
             key_pair: DcpKeyPair::generate(own_did),
             own_did_host,
@@ -360,9 +363,19 @@ impl HolderIdentity {
     /// which advertises no services), this includes one `CredentialService`
     /// entry so a relying party this holder queried can discover where to
     /// query it back.
+    ///
+    /// The published `serviceEndpoint` is a *base* URL
+    /// (`.../dsp/holder`), not the complete Presentation API endpoint -
+    /// `http-api::dcp::verify_dcp_bearer_token` (the verifier side, already
+    /// validated against a real running `eclipse-edc/IdentityHub` before
+    /// this holder role existed - see `compliance/benchmark-dcp-2026-08-27.md`)
+    /// appends `/presentations/query` itself. Publishing the complete URL
+    /// here would get that suffix appended a second time and 404. This
+    /// holder conforms to the verifier's pre-existing, already-proven
+    /// convention rather than the other way around.
     pub fn own_did_document(&self) -> Value {
         let scheme = if self.insecure_http { "http" } else { "https" };
-        let endpoint = format!("{scheme}://{}/dsp/holder/presentations/query", self.own_did_host);
+        let endpoint = format!("{scheme}://{}/dsp/holder", self.own_did_host);
         self.key_pair.did_document(&[("CredentialService".to_string(), endpoint)])
     }
 
@@ -523,7 +536,8 @@ mod tests {
         assert_eq!(services[0]["type"], json!("CredentialService"));
         assert_eq!(
             services[0]["serviceEndpoint"],
-            json!("http://localhost:19100/dsp/holder/presentations/query")
+            json!("http://localhost:19100/dsp/holder"),
+            "the published endpoint is the base URL - verify_dcp_bearer_token appends /presentations/query itself"
         );
     }
 }
