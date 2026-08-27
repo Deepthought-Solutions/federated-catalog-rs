@@ -46,6 +46,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 urlencoding = "2"
 chrono = { version = "0.4", features = ["serde"] }
 dirs = "6"
+# Used by http-api to mint @id values (urn:uuid:...) for synthesized DSP
+# JSON-LD documents (Catalog, Offer, CatalogError) that have no natural
+# stable identifier of their own.
+uuid = { version = "1", features = ["v4"] }
 # default-features = false is load-bearing: contreforts-config's own
 # manifest does `oxigraph = { workspace = true }` unmodified (it has no
 # feature-switch of its own, unlike contreforts-kg after
