@@ -1,0 +1,12 @@
+# Regenerable Gradle build output - never commit, matching
+# compliance/crawler-edc-fixture's own .gitignore.
+build/
+.gradle/
+classpath.txt
+
+# Unlike ../../crawler-edc-fixture/logs (small, seed-only logs kept as
+# evidence), this runtime's own log grows large under real load - one
+# "Management API V3 has been deprecated" WARNING line per request served
+# (~3.6MB / ~24k lines for one 30s/23.5k-request run) - so it's ignored
+# here; the report captures the relevant excerpts and numbers inline.
+logs/

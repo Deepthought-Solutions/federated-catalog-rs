@@ -1,0 +1,1 @@
+[harvest-d] protocol (DSP) port=19221 participantContextId=HARVEST-D assets=HARVEST-D-01,HARVEST-D-02,HARVEST-D-03 log=/home/coder/deepthought-solutions/federated-catalog-rs/compliance/crawler-edc-fixture/logs/harvest-d.log

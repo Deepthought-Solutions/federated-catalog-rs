@@ -1,0 +1,9 @@
+# Raw run output - fully regenerable by re-running ./run-harvest-bench.sh
+# (see README.md), and large under sustained k6 load (the EDC crawler's
+# own JVM log alone was ~3.6MB / ~24k lines for one 30s run, one
+# deprecation-warning line per Management API v3 request). The report
+# (../harvest-benchmark-2026-08-27.md) reproduces the numbers and the key
+# excerpts inline - same convention as ../benchmark-2026-08-27.md and
+# ../benchmark-dcp-2026-08-27.md, whose own k6/sampling working files were
+# never committed either.
+results/

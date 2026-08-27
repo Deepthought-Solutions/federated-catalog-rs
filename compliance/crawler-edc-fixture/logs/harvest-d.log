@@ -1,0 +1,48 @@
+[0;32mINFO 2026-08-27T15:52:03.054250483 Booting EDC runtime[0m
+[0;33mWARNING 2026-08-27T15:52:03.072780994 Configuration file does not exist: dataspaceconnector-configuration.properties. Ignoring.[0m
+[0;32mINFO 2026-08-27T15:52:03.207866287 federated-catalog-rs crawler-edc-fixture: no-op identity: registered FixtureNoopIdentityService (no real auth - out of scope, see module doc comment)[0m
+[0;32mINFO 2026-08-27T15:52:03.237226453 HTTPS enforcement it not enabled, please enable it in a production environment[0m
+[0;33mWARNING 2026-08-27T15:52:03.477166794 Config value: no setting found for 'edc.hostname', falling back to default value 'localhost'[0m
+[0;33mWARNING 2026-08-27T15:52:03.581408152 Using the InMemoryVault is not suitable for production scenarios and should be replaced with an actual Vault![0m
+[0;33mWARNING 2026-08-27T15:52:03.583386461 No TransactionContext registered, a no-op implementation will be used, not suitable for production environments[0m
+[0;33mWARNING 2026-08-27T15:52:03.598222105 No TokenDecorator was registered. The 'scope' field of outgoing protocol messages will be empty[0m
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[0;33mWARNING 2026-08-27T15:52:03.95139322 [Delegated API Authentication] No audience configured for delegated authentication, defaulting to the participantId[0m
+[0;32mINFO 2026-08-27T15:52:03.964060107 federated-catalog-rs crawler-edc-fixture: catalog seed: seeded 3 asset(s) [HARVEST-D-01, HARVEST-D-02, HARVEST-D-03] under participantContextId='HARVEST-D'[0m
+[0;32mINFO 2026-08-27T15:52:04.806117962 89 service extensions started[0m
+[0;32mINFO 2026-08-27T15:52:04.80719933 Runtime 5e4f548c-326c-4b34-b280-ff8592c77b44 ready[0m
+[0;31mSEVERE 2026-08-27T15:53:14.99645989 StateMachineManager [ProviderContractNegotiationManagerImpl] unrecoverable error[0m
+[0;31mjava.util.concurrent.RejectedExecutionException: Task java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask@6e7e35ee[Not completed, task = java.util.concurrent.Executors$RunnableAdapter@3f15e22a[Wrapped task = org.eclipse.edc.statemachine.StateMachineManager$$Lambda/0x0000760b982d1230@6efafe52]] rejected from java.util.concurrent.ScheduledThreadPoolExecutor@23382f76[Shutting down, pool size = 1, active threads = 1, queued tasks = 0, completed tasks = 71]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$AbortPolicy.rejectedExecution(ThreadPoolExecutor.java:2081)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.reject(ThreadPoolExecutor.java:841)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor.delayedExecute(ScheduledThreadPoolExecutor.java:340)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor.schedule(ScheduledThreadPoolExecutor.java:562)
+	at java.base/java.util.concurrent.Executors$DelegatedScheduledExecutorService.schedule(Executors.java:871)
+	at org.eclipse.edc.statemachine.StateMachineManager.scheduleNextIterationIn(StateMachineManager.java:135)
+	at org.eclipse.edc.statemachine.StateMachineManager.performLogic(StateMachineManager.java:129)
+	at org.eclipse.edc.statemachine.StateMachineManager.logic(StateMachineManager.java:105)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+[0m[0;32mINFO 2026-08-27T15:53:14.997794158 Shutdown complete[0m
+[0;32mINFO 2026-08-27T15:53:14.998464096 Cleanup complete[0m
+[0;32mINFO 2026-08-27T15:56:17.770713302 Booting EDC runtime[0m
+[0;33mWARNING 2026-08-27T15:56:17.789587613 Configuration file does not exist: dataspaceconnector-configuration.properties. Ignoring.[0m
+[0;32mINFO 2026-08-27T15:56:17.919977293 federated-catalog-rs crawler-edc-fixture: no-op identity: registered FixtureNoopIdentityService (no real auth - out of scope, see module doc comment)[0m
+[0;32mINFO 2026-08-27T15:56:17.950810016 HTTPS enforcement it not enabled, please enable it in a production environment[0m
+[0;33mWARNING 2026-08-27T15:56:18.124820184 Config value: no setting found for 'edc.hostname', falling back to default value 'localhost'[0m
+[0;33mWARNING 2026-08-27T15:56:18.192982346 Using the InMemoryVault is not suitable for production scenarios and should be replaced with an actual Vault![0m
+[0;33mWARNING 2026-08-27T15:56:18.194768605 No TransactionContext registered, a no-op implementation will be used, not suitable for production environments[0m
+[0;33mWARNING 2026-08-27T15:56:18.210268609 No TokenDecorator was registered. The 'scope' field of outgoing protocol messages will be empty[0m
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[0;33mWARNING 2026-08-27T15:56:18.52707206 [Delegated API Authentication] No audience configured for delegated authentication, defaulting to the participantId[0m
+[0;32mINFO 2026-08-27T15:56:18.539824033 federated-catalog-rs crawler-edc-fixture: catalog seed: seeded 3 asset(s) [HARVEST-D-01, HARVEST-D-02, HARVEST-D-03] under participantContextId='HARVEST-D'[0m
+[0;32mINFO 2026-08-27T15:56:19.198263293 89 service extensions started[0m
+[0;32mINFO 2026-08-27T15:56:19.198991738 Runtime a525c9c0-dd1a-4631-8797-c9221bfa3621 ready[0m

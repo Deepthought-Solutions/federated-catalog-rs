@@ -1,0 +1,1 @@
+[harvest-e] protocol (DSP) port=19321 participantContextId=HARVEST-E assets=HARVEST-E-01,HARVEST-E-02,HARVEST-E-03,HARVEST-E-04,HARVEST-E-05,HARVEST-E-06,HARVEST-E-07 log=/home/coder/deepthought-solutions/federated-catalog-rs/compliance/crawler-edc-fixture/logs/harvest-e.log
