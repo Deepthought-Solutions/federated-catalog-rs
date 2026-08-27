@@ -29,7 +29,7 @@ license = "Apache-2.0"
 # contreforts-core/contreforts-config inherit `authors.workspace = true`;
 # matches the author string their own (unvendored) Cargo.toml used.
 authors = ["Deepthought Solutions"]
-repository = "https://labs.deepthought-solutions.net/Deepthought-Solutions/rust-federated-catalog"
+repository = "https://labs.deepthought-solutions.net/Deepthought-Solutions/federated-catalog-rs"
 
 [workspace.dependencies]
 async-trait = "0.1"

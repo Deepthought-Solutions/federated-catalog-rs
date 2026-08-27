@@ -306,11 +306,11 @@ pub mod memory {
 /// For an origin node whose [`NodeId`] is `<node>`:
 ///
 /// - **Subject and named graph IRI** (the same IRI is reused for both):
-///   `https://rust-federated-catalog.internal/nodes/<percent-encoded node>`.
+///   `https://federated-catalog-rs.internal/nodes/<percent-encoded node>`.
 ///   Percent-encoding the node id guarantees a valid IRI regardless of what
 ///   characters the id contains.
 /// - **Predicate**: the fixed vocabulary IRI
-///   `https://rust-federated-catalog.internal/ns#catalogJson`.
+///   `https://federated-catalog-rs.internal/ns#catalogJson`.
 /// - **Object**: a plain (untyped) string [`oxigraph::model::Literal`]
 ///   holding the node's [`Catalog`] serialized as JSON via `serde_json`.
 ///
@@ -328,8 +328,8 @@ pub mod oxigraph_backend {
     use oxigraph::store::StorageError;
     use std::path::Path;
 
-    const NODE_NS: &str = "https://rust-federated-catalog.internal/nodes/";
-    const CATALOG_JSON_PREDICATE: &str = "https://rust-federated-catalog.internal/ns#catalogJson";
+    const NODE_NS: &str = "https://federated-catalog-rs.internal/nodes/";
+    const CATALOG_JSON_PREDICATE: &str = "https://federated-catalog-rs.internal/ns#catalogJson";
 
     impl From<GraphError> for StoreError {
         fn from(err: GraphError) -> Self {

@@ -1,4 +1,4 @@
-# rust-federated-catalog
+# federated-catalog-rs
 
 An iterative, from-scratch Rust rewrite of [Eclipse EDC](https://projects.eclipse.org/projects/technology.edc)'s
 **Federated Catalog** module.
