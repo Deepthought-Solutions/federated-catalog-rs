@@ -1,0 +1,1 @@
+[instance-a] protocol (DSP) port=18921 participantContextId=EDC-A assets=EDC-A-01,EDC-A-02 log=/home/coder/deepthought-solutions/federated-catalog-rs/compliance/crawler-edc-fixture/logs/instance-a.log

@@ -1,0 +1,1 @@
+[instance-c] protocol (DSP) port=19121 participantContextId=EDC-C assets=EDC-C-01,EDC-C-02,EDC-C-03 log=/home/coder/deepthought-solutions/federated-catalog-rs/compliance/crawler-edc-fixture/logs/instance-c.log

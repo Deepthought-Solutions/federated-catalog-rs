@@ -1,0 +1,11 @@
+# Regenerable Gradle build output - never commit, matching
+# compliance/dcp-test-env's model (see the root .gitignore's comment on
+# that directory for the same rationale).
+build/
+.gradle/
+classpath.txt
+
+# Real EDC instance startup logs are evidence, not build output - kept
+# and committed intentionally (see logs/README.md or
+# ../crawler-edc-integration-test.md), so this file deliberately does
+# NOT ignore *.log.
