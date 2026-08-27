@@ -984,4 +984,227 @@ mod tests {
             .unwrap();
         assert_eq!(not_granted.status(), StatusCode::NOT_FOUND);
     }
+    // --- Per-origin-node nesting in `catalog_request` (bug: today's
+    // `flatten_cache` always merges every cached node's datasets into one
+    // flat top-level `dataset` array, discarding which participant each
+    // dataset came from - see the report this fixes,
+    // `compliance/harvest-benchmark-2026-08-27.md`, and ADR-eligible
+    // follow-up work tracked there). These tests assert the CORRECT,
+    // not-yet-implemented behavior and are expected to fail (RED) against
+    // today's `catalog_request`/`flatten_cache`. They deserialize the
+    // response as `serde_json::Value` rather than the typed `DspCatalog`
+    // struct, since `DspCatalog` has no `catalog` field yet and adding the
+    // real nesting logic is explicitly out of scope for this change - see
+    // the task note on why option (a) (untyped JSON assertions) was
+    // chosen over scaffolding an unused field.
+
+    /// Seed two distinct origin nodes - mirrors the real harvest-bench
+    /// scenario's shape (multiple genuinely different crawled
+    /// participants, not the single hardcoded `seed_sample_catalog` node
+    /// every other test in this file uses). Node "node-a" gets 3 datasets
+    /// (`A1..A3`), node "node-b" gets 7 (`B1..B7`) - distinct id
+    /// namespaces per node so cross-contamination between nested entries
+    /// is trivially detectable. Each node also gets its own
+    /// `participant_id` and its own `DataService`, matching what
+    /// `crates/crawler`'s response parser actually populates for a real
+    /// crawled participant.
+    async fn seed_two_node_catalog(cache: &dyn CatalogCache) {
+        let mut node_a = Catalog::new("catalog-a", NodeId::new("node-a"));
+        node_a.participant_id = Some("did:example:node-a".to_string());
+        for id in ["A1", "A2", "A3"] {
+            node_a.datasets.push(Dataset {
+                id: id.to_string(),
+                properties: Default::default(),
+                distributions: vec![Distribution {
+                    format: "application/json".to_string(),
+                    access_service: "node-a-data-service".to_string(),
+                }],
+            });
+        }
+        node_a.data_services.push(DataService {
+            id: "node-a-data-service".to_string(),
+            endpoint_url: "https://node-a.example.org/dsp".to_string(),
+            endpoint_description: None,
+        });
+        cache.upsert(node_a).await.unwrap();
+
+        let mut node_b = Catalog::new("catalog-b", NodeId::new("node-b"));
+        node_b.participant_id = Some("did:example:node-b".to_string());
+        for id in ["B1", "B2", "B3", "B4", "B5", "B6", "B7"] {
+            node_b.datasets.push(Dataset {
+                id: id.to_string(),
+                properties: Default::default(),
+                distributions: vec![Distribution {
+                    format: "application/json".to_string(),
+                    access_service: "node-b-data-service".to_string(),
+                }],
+            });
+        }
+        node_b.data_services.push(DataService {
+            id: "node-b-data-service".to_string(),
+            endpoint_url: "https://node-b.example.org/dsp".to_string(),
+            endpoint_description: None,
+        });
+        cache.upsert(node_b).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn dsp_catalog_request_nests_per_origin_node_when_multiple_nodes_are_cached() {
+        let state = AppState::new(Arc::new(InMemoryCatalogCache::new()));
+        seed_two_node_catalog(&*state.cache).await;
+
+        let app = build_router(state);
+        let response = post_catalog_request(app, None).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        // Outer document is a pure federation wrapper once 2+ origin nodes
+        // are cached: both top-level dataset and service arrays are empty,
+        // all real content lives in the nested `catalog[]` entries.
+        let top_level_datasets = parsed["dataset"]
+            .as_array()
+            .expect("top-level `dataset` field present (even if empty)");
+        assert!(
+            top_level_datasets.is_empty(),
+            "top-level `dataset` must be empty when 2+ origin nodes are cached, got: {top_level_datasets:?}"
+        );
+        let top_level_services = parsed["service"]
+            .as_array()
+            .expect("top-level `service` field present (even if empty)");
+        assert!(
+            top_level_services.is_empty(),
+            "top-level `service` must be empty when 2+ origin nodes are cached, got: {top_level_services:?}"
+        );
+
+        let nested_catalogs = parsed["catalog"]
+            .as_array()
+            .expect("`catalog` array present when 2+ origin nodes are cached");
+        assert_eq!(
+            nested_catalogs.len(),
+            2,
+            "expected one nested catalog entry per origin node, got: {nested_catalogs:?}"
+        );
+
+        // Index by participantId rather than assuming array order, since
+        // nesting order isn't specified.
+        let mut by_participant: HashMap<String, Vec<String>> = HashMap::new();
+        for entry in nested_catalogs {
+            let participant_id = entry["participantId"]
+                .as_str()
+                .expect("each nested entry carries its own node's participantId")
+                .to_string();
+            let ids: Vec<String> = entry["dataset"]
+                .as_array()
+                .expect("each nested entry has its own `dataset` array")
+                .iter()
+                .map(|d| d["@id"].as_str().unwrap().to_string())
+                .collect();
+            by_participant.insert(participant_id, ids);
+        }
+
+        let mut node_a_ids = by_participant
+            .get("did:example:node-a")
+            .expect("node-a's nested entry present, keyed by its own participantId")
+            .clone();
+        node_a_ids.sort();
+        assert_eq!(node_a_ids, vec!["A1", "A2", "A3"]);
+
+        let mut node_b_ids = by_participant
+            .get("did:example:node-b")
+            .expect("node-b's nested entry present, keyed by its own participantId")
+            .clone();
+        node_b_ids.sort();
+        assert_eq!(node_b_ids, vec!["B1", "B2", "B3", "B4", "B5", "B6", "B7"]);
+
+        // No cross-contamination: exactly 10 dataset ids total, none
+        // duplicated across the two nested entries.
+        let mut all_ids: Vec<String> = by_participant.values().flatten().cloned().collect();
+        all_ids.sort();
+        all_ids.dedup();
+        assert_eq!(all_ids.len(), 10, "expected 10 distinct dataset ids total across both nested entries");
+    }
+
+    #[tokio::test]
+    async fn dsp_catalog_request_bearer_mode_filters_nested_catalogs_per_node() {
+        // Token grants only node-a's "A1" and nothing from node-b.
+        let auth = bearer_auth(&[("consumer-a-token", &["A1"])]);
+        let state = AppState::new(Arc::new(InMemoryCatalogCache::new())).with_dsp_auth(auth);
+        seed_two_node_catalog(&*state.cache).await;
+
+        let app = build_router(state);
+        let response = post_catalog_request(app, Some("consumer-a-token")).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        let top_level_datasets = parsed["dataset"]
+            .as_array()
+            .expect("top-level `dataset` field present (even if empty)");
+        assert!(top_level_datasets.is_empty());
+
+        let nested_catalogs = parsed["catalog"]
+            .as_array()
+            .expect("`catalog` array present when 2+ origin nodes are cached");
+
+        // Design decision (documented here since the task leaves this
+        // choice open): a node with zero visible datasets after per-caller
+        // filtering is OMITTED entirely from the nested `catalog[]` array,
+        // rather than included as an entry with an empty `dataset: []`.
+        // This mirrors the same "don't leak existence to a caller who
+        // can't see it" principle `get_dsp_dataset`'s doc comment already
+        // applies to per-dataset 404s: a caller with zero visibility into
+        // a participant shouldn't learn that participant was crawled at
+        // all. So node-b (0 visible datasets for this token) must not
+        // appear, and only node-a's single visible dataset shows up.
+        assert_eq!(
+            nested_catalogs.len(),
+            1,
+            "node-b has zero visible datasets for this token and must be omitted entirely, got: {nested_catalogs:?}"
+        );
+
+        let node_a_entry = &nested_catalogs[0];
+        assert_eq!(node_a_entry["participantId"], "did:example:node-a");
+        let ids: Vec<&str> = node_a_entry["dataset"]
+            .as_array()
+            .expect("node-a's nested entry has its own `dataset` array")
+            .iter()
+            .map(|d| d["@id"].as_str().unwrap())
+            .collect();
+        assert_eq!(ids, vec!["A1"]);
+    }
+
+    /// Regression guard: the single-origin-node case (every existing test
+    /// in this file, including `seed_sample_catalog`'s
+    /// `"sample-participant"` node) must stay byte-identical to today -
+    /// flat top-level `dataset`, and `catalog` absent from the JSON
+    /// entirely (not merely an empty `Vec` in the Rust struct - checked
+    /// against the raw response text, since `skip_serializing_if` is what
+    /// must make that true once the fix adds the field).
+    #[tokio::test]
+    async fn dsp_catalog_request_single_node_case_is_unaffected() {
+        let state = seeded_dsp_state(DspAuthConfig::default()).await;
+        let app = build_router(state);
+        let response = post_catalog_request(app, None).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let body_text = String::from_utf8(body.to_vec()).expect("response body is valid UTF-8");
+
+        let parsed: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        let dataset_ids: Vec<&str> = parsed["dataset"]
+            .as_array()
+            .expect("top-level `dataset` array present")
+            .iter()
+            .map(|d| d["@id"].as_str().unwrap())
+            .collect();
+        assert_eq!(dataset_ids, vec!["CAT0101", "CAT0102"]);
+
+        assert!(
+            !body_text.contains("\"catalog\""),
+            "single-node response must omit the `catalog` field entirely from the JSON, got: {body_text}"
+        );
+    }
 }
