@@ -12,10 +12,10 @@
 use std::sync::Arc;
 
 use axum::{
+    Json, Router,
     extract::{Query, State},
     response::IntoResponse,
     routing::get,
-    Json, Router,
 };
 use catalog_core::{Catalog, DataService, Dataset, Distribution, NodeId};
 use rdf_store::{CatalogCache, CatalogQuery, StoreResult};

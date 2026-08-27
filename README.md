@@ -37,8 +37,8 @@ top), but as separate Rust crates rather than Java SPI modules:
   a crawl work item, and the `Catalog` / `Dataset` / `DataService` model.
 - `rdf-store` — the storage abstraction a federated catalog cache needs:
   upsert a participant's crawled catalog as a named graph, query stored
-  catalogs, delete one by node id. Storage-agnostic by design (see next
-  section) with one in-memory implementation for now.
+  catalogs, delete one by node id. Storage-agnostic by design (see below),
+  with an in-memory implementation and an Oxigraph-backed implementation.
 - `http-api` — an Axum HTTP server exposing the catalog cache over HTTP,
   starting from a health check and a stub `GET /catalog`.
 
@@ -61,34 +61,50 @@ query API described above were reconstructed there by reading EDC's
 source directly (vendored as a submodule in that repo) before any Rust
 code was written here.
 
-## Why the RDF backend isn't wired in yet
+## The RDF backend
 
 `rdf-store` defines the cache trait as backend-agnostic on purpose. EDC
 itself supports multiple `FederatedCatalogCache` backends (in-memory,
-Postgres via a JSON column) behind one SPI; this project intends to land
+Postgres via a JSON column) behind one SPI; this project has now landed
 on an actual RDF store — since a federated catalog is naturally a set of
 named graphs. A research spike in the `dataspace` repo's `docs/spikes/`
-surveyed the Rust RDF/quad-store ecosystem and recommends
-[Oxigraph](https://crates.io/crates/oxigraph) as the target backend (see
-the rationale in `rdf-store`'s module docs) — but that crate isn't
-depended on here yet: it pulls in a native RocksDB build by default,
-meaningfully heavier than anything else in this workspace, and isn't
-worth adding before there's a concrete graph-naming/vocabulary scheme to
-store against. When it lands, expect a real ADR-equivalent record of the
-choice in the `dataspace` repo alongside the implementation, not just a
-crate added quietly.
+surveyed the Rust RDF/quad-store ecosystem and recommended
+[Oxigraph](https://crates.io/crates/oxigraph) as the target backend, and
+`rdf-store`'s `oxigraph_backend::OxigraphCatalogCache` now implements
+`CatalogCache` on top of it — via `contreforts-kg`, an existing internal
+Oxigraph wrapper from a separate private repo, rather than the bare
+`oxigraph` crate directly. See `rdf-store`'s module docs for the full
+rationale, the quad-mapping scheme, and why it's still a "first cut"
+JSON-blob bridge rather than full RDF decomposition.
 
-Until then, `rdf-store` ships one in-memory implementation — enough for
-`http-api` and the crate's own tests to run against — behind the same
-trait the eventual Oxigraph-backed implementation will satisfy.
+`http-api` still defaults to the in-memory implementation; swapping the
+running server over to the Oxigraph-backed one is a separate, future
+decision. Both implementations satisfy the same `CatalogCache` trait and
+are exercised by equivalent test suites, so either can back `http-api`
+without changing its code.
+
+## Vendored dependencies
+
+`contreforts-kg` and its own two hard dependencies (`contreforts-core`,
+`contreforts-config`) are vendored as git submodules under `vendor/` and
+are real members of this workspace - not a separate, excluded one - so
+this repo's own root `Cargo.toml` decides their shared dependency
+versions and feature defaults (including Oxigraph's `rocksdb` feature).
+See [`vendor/README.md`](vendor/README.md) for what's vendored, why, and
+a known metadata caveat (inherited `license`/`edition` on those crates
+doesn't match their own upstream `Cargo.toml`).
 
 ## Layout
 
 ```
 crates/
   catalog-core/   domain types (Catalog, Dataset, DataService, TargetNode, CrawlWorkItem)
-  rdf-store/      CatalogCache trait + in-memory implementation
+  rdf-store/      CatalogCache trait + in-memory and Oxigraph-backed implementations
   http-api/       Axum server: /health, /catalog
+vendor/
+  contreforts-kg/      Oxigraph wrapper (GraphStore, QueryEngine) - rdf-store's real backend
+  contreforts-core/    contreforts-kg's own dependency (shared error/connector types)
+  contreforts-config/  contreforts-kg's own dependency (a second, separate Oxigraph store)
 ```
 
 ## Building and testing

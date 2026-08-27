@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use http_api::{build_router, seed_sample_catalog, AppState};
+use http_api::{AppState, build_router, seed_sample_catalog};
 use rdf_store::memory::InMemoryCatalogCache;
 
 const DEFAULT_ADDR: &str = "127.0.0.1:8080";

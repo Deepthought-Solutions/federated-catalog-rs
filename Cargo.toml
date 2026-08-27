@@ -4,12 +4,31 @@ members = [
     "crates/catalog-core",
     "crates/rdf-store",
     "crates/http-api",
+    # Vendored as git submodules (see vendor/README.md) - contreforts-kg is
+    # the real Oxigraph-backed store this project's rdf-store crate builds
+    # on; contreforts-core and contreforts-config are its own hard
+    # dependencies, pulled in as first-class workspace members (not a
+    # separate nested workspace) so this root Cargo.toml's
+    # [workspace.dependencies] - not contreforts-workspace's own - decides
+    # shared versions and feature defaults, including oxigraph's
+    # `default-features = false` below.
+    "vendor/contreforts-kg",
+    "vendor/contreforts-core",
+    "vendor/contreforts-core/declaration",
+    "vendor/contreforts-config",
 ]
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
+# 2024, not this project's original 2021: contreforts-core/contreforts-kg/
+# contreforts-config all inherit `edition.workspace = true` from here, and
+# their authors wrote them against 2024 - lowering it back to 2021 for them
+# would be the actual behavior change, not raising ours.
+edition = "2024"
 license = "Apache-2.0"
+# contreforts-core/contreforts-config inherit `authors.workspace = true`;
+# matches the author string their own (unvendored) Cargo.toml used.
+authors = ["Deepthought Solutions"]
 repository = "https://labs.deepthought-solutions.net/Deepthought-Solutions/rust-federated-catalog"
 
 [workspace.dependencies]
@@ -22,3 +41,20 @@ axum = "0.8"
 tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# Below: added only because vendored contreforts-* members inherit these via
+# `{ workspace = true }` - not otherwise needed by this project's own crates.
+urlencoding = "2"
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "6"
+# default-features = false is load-bearing: contreforts-config's own
+# manifest does `oxigraph = { workspace = true }` unmodified (it has no
+# feature-switch of its own, unlike contreforts-kg after
+# contreforts/contreforts-kg#58), so *this* is the only place in the whole
+# graph that can turn RocksDB off for it. contreforts-kg's own
+# `default = ["rocksdb"]` feature (see vendor/contreforts-kg/Cargo.toml)
+# still re-enables `oxigraph/rocksdb` unless rdf-store's own dependency on
+# contreforts-kg is built with `--no-default-features` - see rdf-store's
+# Cargo.toml for which one this project actually uses.
+oxigraph = { version = "0.5", default-features = false }
+contreforts-core = { path = "vendor/contreforts-core" }
+contreforts-config = { path = "vendor/contreforts-config" }
